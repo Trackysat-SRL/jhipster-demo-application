@@ -3,8 +3,11 @@ package com.trackysat.kafka.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.config.kafka.KafkaTopicConfig;
 import com.trackysat.kafka.domain.TrackyPosition;
+import com.trackysat.kafka.domain.TrackysatEvent;
 import com.trackysat.kafka.domain.Vmson;
 import com.trackysat.kafka.repository.TrackyPositionRepository;
+import com.trackysat.kafka.repository.TrackysatEventRepository;
+import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.JSONUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +24,18 @@ public class CassandraConsumerService {
 
     private final TrackyPositionRepository trackyPositionRepository;
 
-    public CassandraConsumerService(TrackyPositionRepository trackyPositionRepository) {
+    private final TrackysatEventRepository trackysatEventRepository;
+
+    private final TrackysatEventMapper trackysatEventMapper;
+
+    public CassandraConsumerService(
+        TrackyPositionRepository trackyPositionRepository,
+        TrackysatEventRepository trackysatEventRepository,
+        TrackysatEventMapper trackysatEventMapper
+    ) {
         this.trackyPositionRepository = trackyPositionRepository;
+        this.trackysatEventRepository = trackysatEventRepository;
+        this.trackysatEventMapper = trackysatEventMapper;
     }
 
     @KafkaListener(
@@ -44,10 +57,14 @@ public class CassandraConsumerService {
     @KafkaListener(topics = TRACKYSAT_TOPIC, groupId = TRACKYSAT_GROUP, containerFactory = "kafkaTrackysatListenerContainerFactory")
     public void listenGroupTrackysat(Vmson message) throws InterruptedException {
         try {
-            log.info("Received Message in group " + KafkaTopicConfig.TRACKY_GROUP + " msg: " + JSONUtils.toString(message));
+            if (message != null) {
+                log.info("Received Message in group " + KafkaTopicConfig.TRACKY_GROUP + " msg: " + JSONUtils.toString(message));
+                TrackysatEvent event = trackysatEventMapper.fromVmson(message);
+                log.info("Saving event: " + JSONUtils.toString(event));
+                trackysatEventRepository.save(event);
+            }
         } catch (JsonProcessingException e) {
             log.error("Cannot parse message", e);
         }
-        Thread.sleep(300000);
     }
 }

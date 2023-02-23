@@ -3,6 +3,7 @@ package com.trackysat.kafka.config.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trackysat.kafka.domain.Vmson;
 import com.trackysat.kafka.exeptions.ErrorHandlingDeserializerSupport;
+import com.trackysat.kafka.repository.DeadLetterQueueRepository;
 import com.trackysat.kafka.utils.CustomJsonDeserializer;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +21,6 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
-import org.springframework.kafka.listener.adapter.RecordFilterStrategy;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
@@ -101,6 +102,9 @@ public class KafkaConsumerConfig {
     //    @Qualifier("kafkaTemplate")
     //    private KafkaOperations<String, Object> kafkaTemplate;
 
+    @Autowired
+    private DeadLetterQueueRepository deadLetterQueueRepository;
+
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -139,11 +143,12 @@ public class KafkaConsumerConfig {
         factory.setBatchListener(false);
 
         // TODO Dead Letter Queue, vogliamo?
-        //        BackOff backoff = new FixedBackOff(CONSUMER_BACKOFF_INTERVAL, CONSUMER_BACKOFF_MAX_ATTEMPTS);
-        //        DefaultErrorHandler error = new DefaultErrorHandler(
-        //            new CustomDeadLetterPublishingRecoverer(kafkaTemplate), backoff);
-        //        factory.setCommonErrorHandler(error);
+        //                BackOff backoff = new FixedBackOff(CONSUMER_BACKOFF_INTERVAL, CONSUMER_BACKOFF_MAX_ATTEMPTS);
+        //                DefaultErrorHandler error = new DefaultErrorHandler(
+        //                    new CustomDeadLetterPublishingRecoverer(kafkaTemplate), backoff);
+        //                factory.setCommonErrorHandler(error);
 
+        //        factory.setRecordFilterStrategy(new CustomRecordFilterStrategy());
         return factory;
     }
 
@@ -155,7 +160,7 @@ public class KafkaConsumerConfig {
         j.configure(configs, false);
         j.addTrustedPackages("*");
         ErrorHandlingDeserializer<Object> ehd = new ErrorHandlingDeserializer<>(j);
-        ehd.setFailedDeserializationFunction(new ErrorHandlingDeserializerSupport<Object>().supply());
+        ehd.setFailedDeserializationFunction(new ErrorHandlingDeserializerSupport<Object>().supply(deadLetterQueueRepository));
         return ehd;
     }
 }
