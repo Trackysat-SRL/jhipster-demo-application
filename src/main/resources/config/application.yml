@@ -124,6 +124,10 @@ spring:
           auto-create-topics: true
           brokers: localhost:9092
       bindings:
+        trackysat:
+          destination: trackysat
+          content-type: text/plain
+          group: trackyfood-group
         binding-in-sse:
           destination: sse-topic
           content-type: text/plain
@@ -226,3 +230,35 @@ jhipster:
 # ===================================================================
 
 # application:
+
+kafka:
+  consumer.enabled: true
+  bootstrap.server: 'kafka-partner-01.telepasskmaster.com:9092,kafka-partner-02.telepasskmaster.com:9092,kafka-partner-03.telepasskmaster.com:9092'
+  security.protocol: SASL_PLAINTEXT
+  sasl.mechanism: PLAIN
+  sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username=trackysat_consumer_01 password=K8jhjf3CmfyTpwasZ27D;
+
+  topic.enrichment: enrichment-all-area
+
+  consumer.client.id: trackysat-consumer-id-01
+  consumer.group.id: trackysat
+  consumer.number: 1
+  consumer.auto.offset.reset: latest
+
+  # 80KB or 1 sec.
+  consumer.fetch.min.bytes: 81920
+  consumer.max.partition.fetch.bytes: 1048576
+  consumer.fetch.max.wait.ms: 1000
+  consumer.session.timeout.ms: 120000
+
+  consumer.max.poll.records: 100
+  consumer.max.poll.interval.ms: 60000
+  consumer.enable.auto.commit: false
+
+  consumer.backoff.max.attempts: 0
+  consumer.backoff.interval: 200
+
+  consumer.threadPool.corePoolSize: 10
+  consumer.threadPool.maxPoolSize: 10
+  consumer.threadPool.queueCapacity: 200
+  consumer.threadPool.awaitTerminationSeconds: 6

@@ -50,7 +50,7 @@ spring:
     cassandra:
       contact-points: localhost
       compression: LZ4
-      keyspace-name: demoKafkaJHipster
+      keyspace-name: cluster_trackyfood_test
       local-datacenter: datacenter1
   mail:
     host: localhost
