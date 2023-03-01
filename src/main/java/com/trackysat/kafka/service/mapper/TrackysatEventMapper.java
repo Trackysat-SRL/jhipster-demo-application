@@ -3,9 +3,9 @@ package com.trackysat.kafka.service.mapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.TrackysatEvent;
 import com.trackysat.kafka.domain.Vmson;
-import com.trackysat.kafka.domain.vmson.Con;
 import com.trackysat.kafka.domain.vmson.Ets;
 import com.trackysat.kafka.domain.vmson.VmsonBody;
+import com.trackysat.kafka.domain.vmson.VmsonCon;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.time.Instant;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class TrackysatEventMapper {
         String id = JSONUtils.toString(body.getOri());
         e.setDeviceId(id);
 
-        Instant trackingTime = body.getCon().stream().findFirst().map(Con::getEts).map(Ets::getTst).orElse(body.getEts().getTst());
+        Instant trackingTime = body.getCon().stream().findFirst().map(VmsonCon::getEts).map(Ets::getTst).orElse(body.getEts().getTst());
         e.setCreatedDate(trackingTime);
 
         e.setEventDate(body.getEts().getTst());

@@ -2,7 +2,7 @@ package com.trackysat.kafka.domain.vmson;
 
 import java.util.List;
 
-public class Con {
+public class VmsonCon {
 
     Ets ets;
     Sat sat;

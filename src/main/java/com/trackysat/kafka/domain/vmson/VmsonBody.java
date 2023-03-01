@@ -8,7 +8,7 @@ public class VmsonBody {
     String ver;
 
     Des des;
-    List<Con> con;
+    List<VmsonCon> con;
     Ets ets;
     Ori ori;
 
@@ -36,11 +36,11 @@ public class VmsonBody {
         this.des = des;
     }
 
-    public List<Con> getCon() {
+    public List<VmsonCon> getCon() {
         return con;
     }
 
-    public void setCon(List<Con> con) {
+    public void setCon(List<VmsonCon> con) {
         this.con = con;
     }
 
