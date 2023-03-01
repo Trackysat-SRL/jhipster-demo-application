@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import jnr.ffi.annotations.In;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -71,15 +72,18 @@ public class CassandraConsumerService {
 
     public Optional<StatusDTO> getStatus() {
         StatusDTO status = new StatusDTO();
+        long duration = Instant.now().getEpochSecond() - startDate.getEpochSecond();
+        status.setRunningTime(duration);
         status.setEnabled(isEnabled.get());
         status.setEventCounter(eventCounter.get());
-        status.setErrorCounter(eventCounter.get());
+        status.setErrorCounter(errorCounter.get());
         return Optional.of(status);
     }
 
     public boolean reset() {
         startDate = Instant.now();
         eventCounter.set(0);
+        errorCounter.set(0);
         isEnabled.set(true);
         return true;
     }

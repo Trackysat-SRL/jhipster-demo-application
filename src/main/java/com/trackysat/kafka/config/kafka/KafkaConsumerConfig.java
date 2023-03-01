@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trackysat.kafka.domain.Vmson;
 import com.trackysat.kafka.exeptions.ErrorHandlingDeserializerSupport;
 import com.trackysat.kafka.repository.DeadLetterQueueRepository;
+import com.trackysat.kafka.service.CassandraConsumerService;
 import com.trackysat.kafka.utils.CustomJsonDeserializer;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.util.HashMap;
@@ -105,6 +106,9 @@ public class KafkaConsumerConfig {
     @Autowired
     private DeadLetterQueueRepository deadLetterQueueRepository;
 
+    @Autowired
+    private CassandraConsumerService cassandraConsumerService;
+
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -160,7 +164,9 @@ public class KafkaConsumerConfig {
         j.configure(configs, false);
         j.addTrustedPackages("*");
         ErrorHandlingDeserializer<Object> ehd = new ErrorHandlingDeserializer<>(j);
-        ehd.setFailedDeserializationFunction(new ErrorHandlingDeserializerSupport<Object>().supply(deadLetterQueueRepository));
+        ehd.setFailedDeserializationFunction(
+            new ErrorHandlingDeserializerSupport<Object>().supply(deadLetterQueueRepository, cassandraConsumerService)
+        );
         return ehd;
     }
 }

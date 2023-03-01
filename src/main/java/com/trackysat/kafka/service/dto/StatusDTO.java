@@ -1,10 +1,21 @@
 package com.trackysat.kafka.service.dto;
 
+import java.time.Instant;
+
 public class StatusDTO {
 
+    long runningTime;
     boolean isEnabled;
     int eventCounter;
     int errorCounter;
+
+    public long getRunningTime() {
+        return runningTime;
+    }
+
+    public void setRunningTime(long runningTime) {
+        this.runningTime = runningTime;
+    }
 
     public boolean isEnabled() {
         return isEnabled;
