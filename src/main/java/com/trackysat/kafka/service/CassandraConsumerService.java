@@ -41,20 +41,22 @@ public class CassandraConsumerService {
 
     @KafkaListener(topics = TRACKYSAT_TOPIC, groupId = TRACKYSAT_GROUP, containerFactory = "kafkaTrackysatListenerContainerFactory")
     public void listenGroupTrackysat(Vmson message) throws InterruptedException {
-        int counter = eventCounter.incrementAndGet();
-        long duration = Instant.now().getEpochSecond() - startDate.getEpochSecond();
-        log.info("Received VMSON in group " + TRACKYSAT_GROUP + " counter: " + counter + ", running for " + duration + "s");
         try {
+            int counter = eventCounter.incrementAndGet();
+            long duration = Instant.now().getEpochSecond() - startDate.getEpochSecond();
+            log.info("Received VMSON in group " + TRACKYSAT_GROUP + " counter: " + counter + ", running for " + duration + "s");
             if (isEnabled.get()) {
                 if (message != null) {
-                    log.info("Received Message in group " + TRACKYSAT_GROUP + " msg: " + JSONUtils.toString(message));
+                    //                    log.info("Received Message in group " + TRACKYSAT_GROUP + " msg: " + JSONUtils.toString(message));
                     TrackysatEvent event = trackysatEventMapper.fromVmson(message);
-                    log.info("Saving event: " + JSONUtils.toString(event));
+                    //                    log.info("Saving event: " + JSONUtils.toString(event));
                     trackysatEventRepository.save(event);
                 }
             }
         } catch (JsonProcessingException e) {
             log.error("Cannot parse message", e);
+        } catch (Exception e) {
+            log.error("GENERIC ERROR", e);
         }
     }
 
