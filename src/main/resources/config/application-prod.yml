@@ -52,9 +52,9 @@ spring:
       # it can be set to any label, branch or commit of the configuration source Git repository
   data:
     cassandra:
-      contact-points: localhost
+      contact-points: ip-172-31-24-247.eu-west-1.compute.internal
       compression: LZ4
-      keyspace-name: demoKafkaJHipster
+      keyspace-name: cluster_trackyfood
       local-datacenter: datacenter1
   mail:
     host: localhost

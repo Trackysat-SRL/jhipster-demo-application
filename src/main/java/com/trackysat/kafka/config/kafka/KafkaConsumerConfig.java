@@ -109,7 +109,7 @@ public class KafkaConsumerConfig {
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVER);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaTopicConfig.TRACKY_GROUP);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, CONSUMER_GROUP_ID);
         props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SECURITY_PROTOCOL);
         props.put(SaslConfigs.SASL_MECHANISM, SASL_MECHANISM);
         props.put(SaslConfigs.SASL_JAAS_CONFIG, SASL_JAAS_CONFIG);

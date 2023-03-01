@@ -132,13 +132,11 @@ public class UserRepository {
         return findOneFromIndex(stmt);
     }
 
-    @Cacheable(cacheNames = USERS_BY_EMAIL_CACHE)
     public Optional<User> findOneByEmailIgnoreCase(String email) {
         BoundStatement stmt = findOneByEmailStmt.bind().setString("email", email.toLowerCase());
         return findOneFromIndex(stmt);
     }
 
-    @Cacheable(cacheNames = USERS_BY_LOGIN_CACHE)
     public Optional<User> findOneByLogin(String login) {
         BoundStatement stmt = findOneByLoginStmt.bind().setString("login", login);
         return findOneFromIndex(stmt);

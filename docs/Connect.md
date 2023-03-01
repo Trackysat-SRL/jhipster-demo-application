@@ -4,7 +4,7 @@
 
 #curl -o https://dyy9gra3di.execute-api.eu-west-1.amazonaws.com/prod/allow-ip/8a87eb2b-904d-4b2f-a7b2-5a93d81248b8
 
-screen -dmS cass-db-01 autossh -M 0 -o 'ServerAliveInterval 30' -o 'ServerAliveCountMax 3' -L 9042:172.31.23.157:9042 ec2-user@54.229.57.22 -i ../aws/bastion.pem
+screen -dmS cass-db-01 autossh -M 0 -o 'ServerAliveInterval 30' -o 'ServerAliveCountMax 3' -L 9042:172.31.24.247:9042 ec2-user@54.229.57.22 -i ../aws/bastion.pem
 
 # AWS Cassandra Setup
 Instance must have access to internet (public ip or NAT)

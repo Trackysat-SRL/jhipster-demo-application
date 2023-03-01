@@ -6,11 +6,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.trackysat.kafka</groupId>
-    <artifactId>demo-kafka-j-hipster</artifactId>
+    <artifactId>fletttrack</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>Demo Kafka J Hipster</name>
-    <description>Description for demoKafkaJHipster</description>
+    <name>FleetTrack Kafka J Hipster</name>
+    <description>Description for FleetTrack</description>
 
     <repositories>
         <!-- jhipster-needle-maven-repository -->
