@@ -106,9 +106,6 @@ public class KafkaConsumerConfig {
     @Autowired
     private DeadLetterQueueRepository deadLetterQueueRepository;
 
-    @Autowired
-    private CassandraConsumerService cassandraConsumerService;
-
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -164,9 +161,7 @@ public class KafkaConsumerConfig {
         j.configure(configs, false);
         j.addTrustedPackages("*");
         ErrorHandlingDeserializer<Object> ehd = new ErrorHandlingDeserializer<>(j);
-        ehd.setFailedDeserializationFunction(
-            new ErrorHandlingDeserializerSupport<Object>().supply(deadLetterQueueRepository, cassandraConsumerService)
-        );
+        ehd.setFailedDeserializationFunction(new ErrorHandlingDeserializerSupport<Object>().supply(deadLetterQueueRepository));
         return ehd;
     }
 }

@@ -14,14 +14,10 @@ public class ErrorHandlingDeserializerSupport<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(ErrorHandlingDeserializerSupport.class);
 
-    public Function<FailedDeserializationInfo, T> supply(
-        DeadLetterQueueRepository deadLetterQueueRepository,
-        CassandraConsumerService ccs
-    ) {
+    public Function<FailedDeserializationInfo, T> supply(DeadLetterQueueRepository deadLetterQueueRepository) {
         return message -> {
             byte[] data = message.getData();
             String msg = new String(data);
-            ccs.getErrorCounter().incrementAndGet();
             //            if (!msg.startsWith("<")) {
             try {
                 logger.error("message input: {}", msg);
