@@ -1,5 +1,5 @@
 # ===================================================================
-# Spring Boot configuration for the "dev" profile.
+# Spring Boot configuration for the "test" profile.
 #
 # This configuration overrides the application.yml file.
 #
@@ -48,7 +48,7 @@ spring:
       # it can be set to any label, branch or commit of the configuration source Git repository
   data:
     cassandra:
-      contact-points: localhost
+      contact-points: 172.31.24.247
       compression: LZ4
       keyspace-name: cluster_trackyfood_test
       local-datacenter: datacenter1
