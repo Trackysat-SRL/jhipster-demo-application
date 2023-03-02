@@ -10,7 +10,7 @@ screen -dmS cass-db-01 autossh -M 0 -o 'ServerAliveInterval 30' -o 'ServerAliveC
 Instance must have access to internet (public ip or NAT)
 
 1. Open tunnel to ssh
-> screen -dmS cass-db-01 autossh -M 0 -o 'ServerAliveInterval 30' -o 'ServerAliveCountMax 3' -L 2222:172.31.23.157:22 ec2-user@54.229.57.22 -i ../aws/bastion.pem
+> screen -dmS cass-db-01 autossh -M 0 -o 'ServerAliveInterval 30' -o 'ServerAliveCountMax 3' -L 2222:172.31.24.247:22 ec2-user@54.229.57.22 -i ../aws/bastion.pem
 
 from -> https://gist.github.com/diegopacheco/2c36ba8bca1c3a2e44c5f422357a060e
 

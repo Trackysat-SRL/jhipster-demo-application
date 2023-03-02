@@ -69,13 +69,13 @@ public class UserRepository {
 
     private PreparedStatement deleteByEmailStmt;
 
-    private PreparedStatement truncateStmt;
-
-    private PreparedStatement truncateByResetKeyStmt;
-
-    private PreparedStatement truncateByLoginStmt;
-
-    private PreparedStatement truncateByEmailStmt;
+    //    private PreparedStatement truncateStmt;
+    //
+    //    private PreparedStatement truncateByResetKeyStmt;
+    //
+    //    private PreparedStatement truncateByLoginStmt;
+    //
+    //    private PreparedStatement truncateByEmailStmt;
 
     public UserRepository(CqlSession session, Validator validator, CassandraProperties cassandraProperties) {
         this.session = session;
@@ -108,14 +108,13 @@ public class UserRepository {
         insertByEmailStmt = session.prepare("INSERT INTO user_by_email (email, id) " + "VALUES (:email, :id)");
 
         deleteByEmailStmt = session.prepare("DELETE FROM user_by_email " + "WHERE email = :email");
-
-        truncateStmt = session.prepare("TRUNCATE user");
-
-        truncateByResetKeyStmt = session.prepare("TRUNCATE user_by_reset_key");
-
-        truncateByLoginStmt = session.prepare("TRUNCATE user_by_login");
-
-        truncateByEmailStmt = session.prepare("TRUNCATE user_by_email");
+        //        truncateStmt = session.prepare("TRUNCATE user");
+        //
+        //        truncateByResetKeyStmt = session.prepare("TRUNCATE user_by_reset_key");
+        //
+        //        truncateByLoginStmt = session.prepare("TRUNCATE user_by_login");
+        //
+        //        truncateByEmailStmt = session.prepare("TRUNCATE user_by_email");
     }
 
     public Optional<User> findById(String id) {
@@ -201,18 +200,19 @@ public class UserRepository {
         return Optional.ofNullable(rs.one()).map(row -> row.getString("id")).flatMap(id -> userDao.get(id));
     }
 
+    // TODO AWS Keyspace do not support TRUNCATE Operation https://docs.aws.amazon.com/keyspaces/latest/devguide/cassandra-apis.html
     public void deleteAll() {
-        BoundStatement truncate = truncateStmt.bind();
-        session.execute(truncate);
-
-        BoundStatement truncateByEmail = truncateByEmailStmt.bind();
-        session.execute(truncateByEmail);
-
-        BoundStatement truncateByLogin = truncateByLoginStmt.bind();
-        session.execute(truncateByLogin);
-
-        BoundStatement truncateByResetKey = truncateByResetKeyStmt.bind();
-        session.execute(truncateByResetKey);
+        //        BoundStatement truncate = truncateStmt.bind();
+        //        session.execute(truncate);
+        //
+        //        BoundStatement truncateByEmail = truncateByEmailStmt.bind();
+        //        session.execute(truncateByEmail);
+        //
+        //        BoundStatement truncateByLogin = truncateByLoginStmt.bind();
+        //        session.execute(truncateByLogin);
+        //
+        //        BoundStatement truncateByResetKey = truncateByResetKeyStmt.bind();
+        //        session.execute(truncateByResetKey);
     }
 }
 

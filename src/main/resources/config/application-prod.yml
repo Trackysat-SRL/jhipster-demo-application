@@ -52,10 +52,13 @@ spring:
       # it can be set to any label, branch or commit of the configuration source Git repository
   data:
     cassandra:
-      contact-points: 172.31.24.247
+      contact-points: cassandra.eu-west-1.amazonaws.com:9142
       compression: LZ4
-      keyspace-name: cluster_trackyfood
-      local-datacenter: datacenter1
+      keyspace-name: fleettrack
+      local-datacenter: eu-west-1
+      username: fleettrack-cass-at-461569474594
+      password: stHH/ZtwaYDi/issm3j5O17gwr1I+gdMfFfZvVRGvFY=
+      ssl: true
   mail:
     host: localhost
     port: 25
