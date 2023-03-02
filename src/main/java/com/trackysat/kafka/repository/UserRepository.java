@@ -165,7 +165,7 @@ public class UserRepository {
                 session.execute(deleteByEmailStmt.bind().setString("email", oldUser.getEmail().toLowerCase()));
             }
         }
-        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.LOGGED);
+        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
         batch.addStatement(userDao.saveQuery(user));
         if (!StringUtils.isEmpty(user.getActivationKey())) {
             batch.addStatement(
@@ -182,7 +182,7 @@ public class UserRepository {
     }
 
     public void delete(User user) {
-        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.LOGGED);
+        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
         batch.addStatement(userDao.deleteQuery(user));
         if (!StringUtils.isEmpty(user.getActivationKey())) {
             batch.addStatement(deleteByActivationKeyStmt.bind().setString("activation_key", user.getActivationKey()));

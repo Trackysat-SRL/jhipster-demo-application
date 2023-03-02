@@ -47,14 +47,14 @@ public class DeadLetterQueueRepository {
             throw new ConstraintViolationException(violations);
         }
         //        DeadLetterQueue oldDeadLetterQueue = deadLetterQueueDao.get(deadLetterQueue.getCustomerId()).orElse(null);
-        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.LOGGED);
+        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
         batch.addStatement(deadLetterQueueDao.saveQuery(deadLetterQueue));
         session.execute(batch.build());
         return deadLetterQueue;
     }
 
     public void delete(DeadLetterQueue deadLetterQueue) {
-        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.LOGGED);
+        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
         batch.addStatement(deadLetterQueueDao.deleteQuery(deadLetterQueue));
         session.execute(batch.build());
     }

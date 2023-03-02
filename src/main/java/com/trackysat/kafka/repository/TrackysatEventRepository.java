@@ -46,14 +46,14 @@ public class TrackysatEventRepository {
             throw new ConstraintViolationException(violations);
         }
         //        TrackysatEvent oldTrackysatEvent = trackysatEventDao.get(trackysatEvent.getCustomerId()).orElse(null);
-        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.LOGGED);
+        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
         batch.addStatement(trackysatEventDao.saveQuery(trackysatEvent));
         session.execute(batch.build());
         return trackysatEvent;
     }
 
     public void delete(TrackysatEvent trackysatEvent) {
-        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.LOGGED);
+        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
         batch.addStatement(trackysatEventDao.deleteQuery(trackysatEvent));
         session.execute(batch.build());
     }
