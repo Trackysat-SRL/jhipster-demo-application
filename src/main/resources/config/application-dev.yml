@@ -55,6 +55,9 @@ spring:
       username: fleettrack-cass-at-461569474594
       password: stHH/ZtwaYDi/issm3j5O17gwr1I+gdMfFfZvVRGvFY=
       ssl: true
+      request:
+        consistency: local_quorum
+        serial-consistency: local_quorum
   mail:
     host: localhost
     port: 25
@@ -136,3 +139,5 @@ jhipster:
 # ===================================================================
 
 # application:
+kafka:
+  producer.enabled: true

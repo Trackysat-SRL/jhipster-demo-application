@@ -18,18 +18,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CassandraConsumerService {
 
-    public static final String TRACKYSAT_TOPIC = "a-19";
     public static final String TRACKYSAT_GROUP = "trackysat";
+    public static final String TRACKYSAT_TOPIC = "a-19";
 
-    private final Logger log = LoggerFactory.getLogger(CassandraConsumerService.class);
+    @Value(value = "${kafka.consumer.number}")
+    private final String CONSUMER_NUMBER = "10";
 
     private final DeadLetterQueueRepository deadLetterQueueRepository;
+    private final Logger log = LoggerFactory.getLogger(CassandraConsumerService.class);
 
     private final TrackysatEventRepository trackysatEventRepository;
 
@@ -50,20 +53,17 @@ public class CassandraConsumerService {
         this.trackysatEventMapper = trackysatEventMapper;
     }
 
-    @KafkaListener(topics = TRACKYSAT_TOPIC, groupId = TRACKYSAT_GROUP, containerFactory = "kafkaTrackysatListenerContainerFactory")
+    @KafkaListener(
+        topics = TRACKYSAT_TOPIC,
+        groupId = TRACKYSAT_GROUP,
+        containerFactory = "kafkaTrackysatListenerContainerFactory",
+        concurrency = CONSUMER_NUMBER
+    )
     public void listenGroupTrackysat(String message) throws InterruptedException {
+        log.debug("Received VMSON in group " + TRACKYSAT_GROUP + " msg: " + message);
         if (message == null) return;
         try {
-            long duration = Instant.now().getEpochSecond() - startDate.getEpochSecond();
-            log.info("Received VMSON in group " + TRACKYSAT_GROUP + ", running for " + duration + "s");
-            if (isEnabled.get()) {
-                log.debug("Input json: {}", message);
-                if (message.startsWith("<")) {
-                    processError(message, "XML");
-                } else {
-                    processEvent(message);
-                }
-            }
+            processEvent(message);
         } catch (JsonProcessingException e) {
             log.error("Cannot parse message", e);
             processError(message, e.getMessage());
@@ -76,27 +76,31 @@ public class CassandraConsumerService {
     private void processEvent(String message) throws JsonProcessingException {
         log.debug("processEvent input: {}", message);
         eventCounter.incrementAndGet();
-        Vmson record = JSONUtils.toJson(message, Vmson.class);
-        TrackysatEvent event = trackysatEventMapper.fromVmson(record);
-        trackysatEventRepository.save(event);
+        if (isEnabled.get()) {
+            Vmson record = JSONUtils.toJson(message, Vmson.class);
+            TrackysatEvent event = trackysatEventMapper.fromVmson(record);
+            trackysatEventRepository.save(event);
+        }
     }
 
     private void processError(String msg, String errorMessage) {
         log.debug("processError input: {}", msg);
         errorCounter.incrementAndGet();
-        String hash = null;
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            hash = new String(digest.digest(msg.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+        if (isEnabled.get()) {
+            String hash = null;
+            try {
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                hash = new String(digest.digest(msg.getBytes(StandardCharsets.UTF_8)));
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+            if (hash == null) hash = "generic-id";
+            DeadLetterQueue dlq = new DeadLetterQueue();
+            dlq.setEventId(hash);
+            dlq.setData(msg);
+            dlq.setException(errorMessage);
+            deadLetterQueueRepository.save(dlq);
         }
-        if (hash == null) hash = "generic-id";
-        DeadLetterQueue dlq = new DeadLetterQueue();
-        dlq.setEventId(hash);
-        dlq.setData(msg);
-        dlq.setException(errorMessage);
-        deadLetterQueueRepository.save(dlq);
     }
 
     public AtomicBoolean getIsEnabled() {

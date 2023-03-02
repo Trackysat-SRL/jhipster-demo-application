@@ -116,26 +116,6 @@ management:
 spring:
   application:
     name: demoKafkaJHipster
-  cloud:
-    stream:
-      kafka:
-        binder:
-          replicationFactor: 1
-          auto-create-topics: true
-          brokers: localhost:9092
-      bindings:
-        trackysat:
-          destination: trackysat
-          content-type: text/plain
-          group: trackyfood-group
-        binding-in-sse:
-          destination: sse-topic
-          content-type: text/plain
-          group: demo-kafka-j-hipster
-        binding-out-sse:
-          destination: sse-topic
-          content-type: text/plain
-          group: demo-kafka-j-hipster
   profiles:
     # The commented value for `active` can be replaced with valid Spring profiles to load.
     # Otherwise, it will be filled in by maven when building the JAR file
@@ -232,8 +212,9 @@ jhipster:
 # application:
 
 kafka:
+  producer.enabled: false
   consumer.enabled: true
-  bootstrap.server: 'kafka-partner-01.telepasskmaster.com:9092,kafka-partner-02.telepasskmaster.com:9092,kafka-partner-03.telepasskmaster.com:9092'
+  bootstrap.server: localhost:9092
   security.protocol: SASL_PLAINTEXT
   sasl.mechanism: PLAIN
   sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username=trackysat_consumer_01 password=K8jhjf3CmfyTpwasZ27D;

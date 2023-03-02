@@ -1,9 +1,7 @@
 package com.trackysat.kafka.config.kafka;
 
 import com.trackysat.kafka.repository.DeadLetterQueueRepository;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.config.SaslConfigs;
@@ -12,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
@@ -90,6 +89,9 @@ public class KafkaConsumerConfig {
     @Value(value = "${kafka.consumer.threadPool.awaitTerminationSeconds}")
     private String CONSUMER_THREADPOOL_AWAITTERMINATIONSECONDS;
 
+    @Autowired
+    Environment env;
+
     // TODO Dead Letter Queue Producer
     //    @Autowired()
     //    @Qualifier("kafkaTemplate")
@@ -103,9 +105,11 @@ public class KafkaConsumerConfig {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVER);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, CONSUMER_GROUP_ID);
-        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SECURITY_PROTOCOL);
-        props.put(SaslConfigs.SASL_MECHANISM, SASL_MECHANISM);
-        props.put(SaslConfigs.SASL_JAAS_CONFIG, SASL_JAAS_CONFIG);
+        if (Arrays.stream(env.getActiveProfiles()).noneMatch(p -> Objects.equals(p, "dev"))) {
+            props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SECURITY_PROTOCOL);
+            props.put(SaslConfigs.SASL_MECHANISM, SASL_MECHANISM);
+            props.put(SaslConfigs.SASL_JAAS_CONFIG, SASL_JAAS_CONFIG);
+        }
         props.put(ConsumerConfig.CLIENT_ID_CONFIG, CONSUMER_CLIENT_ID);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, CONSUMER_AUTO_OFFSET_RESET);
         props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, CONSUMER_FETCH_MIN_BYTES);
@@ -119,7 +123,6 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         //        props.put(ConsumerConfig.TOPIC_ENRICHMENT, TOPIC_ENRICHMENT);
         //        props.put(ConsumerConfig.GROUP_ID_CONFIG, CONSUMER_GROUP_ID);
-        //        props.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, CONSUMER_NUMBER);
         //        props.put(ConsumerConfig.THREADPOOL_COREPOOLSIZE_CONFIG, CONSUMER_THREADPOOL_COREPOOLSIZE);
         //        props.put(ConsumerConfig.THREADPOOL_MAXPOOLSIZE_CONFIG, CONSUMER_THREADPOOL_MAXPOOLSIZE);
         //        props.put(ConsumerConfig.THREADPOOL_QUEUECAPACITY_CONFIG, CONSUMER_THREADPOOL_QUEUECAPACITY);
