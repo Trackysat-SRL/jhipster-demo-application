@@ -242,8 +242,6 @@ kafka:
 
   consumer.client.id: trackysat-consumer-id-01
   consumer.group.id: trackysat
-  consumer.number: 1
-  consumer.auto.offset.reset: latest
 
   # 80KB or 1 sec.
   consumer.fetch.min.bytes: 81920
@@ -251,9 +249,12 @@ kafka:
   consumer.fetch.max.wait.ms: 1000
   consumer.session.timeout.ms: 120000
 
-  consumer.max.poll.records: 100
+  # 20 events or 1 sec poll. 2 consumers
+  consumer.max.poll.records: 20
   consumer.max.poll.interval.ms: 60000
-  consumer.enable.auto.commit: false
+  consumer.enable.auto.commit: true
+  consumer.number: 2
+  consumer.auto.offset.reset: latest
 
   consumer.backoff.max.attempts: 0
   consumer.backoff.interval: 200
