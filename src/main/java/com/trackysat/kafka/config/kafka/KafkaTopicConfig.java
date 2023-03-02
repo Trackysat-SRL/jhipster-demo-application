@@ -19,6 +19,9 @@ public class KafkaTopicConfig {
     @Value(value = "${kafka.consumer.number}")
     private final String CONSUMER_NUMBER = "10";
 
+    @Value(value = "${kafka.producer.enabled}")
+    private boolean enabled;
+
     @Bean
     public KafkaAdmin kafkaAdmin() {
         Map<String, Object> configs = new HashMap<>();
@@ -28,6 +31,7 @@ public class KafkaTopicConfig {
 
     @Bean
     public NewTopic trackysatTopic() {
+        if (!enabled) return null;
         return new NewTopic(CassandraConsumerService.TRACKYSAT_TOPIC, Integer.parseInt(CONSUMER_NUMBER), (short) 1);
     }
 }

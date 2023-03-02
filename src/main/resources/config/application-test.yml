@@ -139,3 +139,6 @@ jhipster:
 # ===================================================================
 
 # application:
+
+kafka:
+  bootstrap.server: 'kafka-partner-01.telepasskmaster.com:9092,kafka-partner-02.telepasskmaster.com:9092,kafka-partner-03.telepasskmaster.com:9092'
