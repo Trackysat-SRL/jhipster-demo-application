@@ -154,7 +154,6 @@ spring:
       console-available: true
 
 server:
-  port: 443
   servlet:
     session:
       cookie:
