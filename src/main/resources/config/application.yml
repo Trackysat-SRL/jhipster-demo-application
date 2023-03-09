@@ -234,7 +234,7 @@ kafka:
   consumer.max.poll.records: 20
   consumer.max.poll.interval.ms: 60000
   consumer.enable.auto.commit: true
-  consumer.number: 2
+  consumer.number: 3
   consumer.auto.offset.reset: latest
 
   consumer.backoff.max.attempts: 0

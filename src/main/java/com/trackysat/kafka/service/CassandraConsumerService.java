@@ -29,7 +29,7 @@ public class CassandraConsumerService {
     public static final String TRACKYSAT_TOPIC = "a-19";
 
     @Value(value = "${kafka.consumer.number}")
-    private final String CONSUMER_NUMBER = "10";
+    private final String CONSUMER_NUMBER = "3";
 
     private final DeadLetterQueueRepository deadLetterQueueRepository;
     private final Logger log = LoggerFactory.getLogger(CassandraConsumerService.class);
