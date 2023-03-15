@@ -2,10 +2,10 @@ package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.DeadLetterQueue;
-import com.trackysat.kafka.domain.TrackysatEvent;
+import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.domain.Vmson;
 import com.trackysat.kafka.repository.DeadLetterQueueRepository;
-import com.trackysat.kafka.repository.TrackysatEventRepository;
+import com.trackysat.kafka.repository.TrackyEventRepository;
 import com.trackysat.kafka.service.dto.StatusDTO;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.JSONUtils;
@@ -34,7 +34,7 @@ public class CassandraConsumerService {
     private final DeadLetterQueueRepository deadLetterQueueRepository;
     private final Logger log = LoggerFactory.getLogger(CassandraConsumerService.class);
 
-    private final TrackysatEventRepository trackysatEventRepository;
+    private final TrackyEventRepository trackyEventRepository;
 
     private final TrackysatEventMapper trackysatEventMapper;
 
@@ -45,11 +45,11 @@ public class CassandraConsumerService {
 
     public CassandraConsumerService(
         DeadLetterQueueRepository deadLetterQueueRepository,
-        TrackysatEventRepository trackysatEventRepository,
+        TrackyEventRepository trackyEventRepository,
         TrackysatEventMapper trackysatEventMapper
     ) {
         this.deadLetterQueueRepository = deadLetterQueueRepository;
-        this.trackysatEventRepository = trackysatEventRepository;
+        this.trackyEventRepository = trackyEventRepository;
         this.trackysatEventMapper = trackysatEventMapper;
     }
 
@@ -78,8 +78,8 @@ public class CassandraConsumerService {
         eventCounter.incrementAndGet();
         if (isEnabled.get()) {
             Vmson record = JSONUtils.toJson(message, Vmson.class);
-            TrackysatEvent event = trackysatEventMapper.fromVmson(record);
-            trackysatEventRepository.save(event);
+            TrackyEvent event = trackysatEventMapper.fromVmson(record);
+            trackyEventRepository.save(event);
         }
     }
 

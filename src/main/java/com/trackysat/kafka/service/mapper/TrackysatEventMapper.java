@@ -1,24 +1,28 @@
 package com.trackysat.kafka.service.mapper;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.trackysat.kafka.domain.TrackysatEvent;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.domain.Vmson;
-import com.trackysat.kafka.domain.vmson.Ets;
-import com.trackysat.kafka.domain.vmson.VmsonBody;
-import com.trackysat.kafka.domain.vmson.VmsonCon;
+import com.trackysat.kafka.domain.vmson.*;
+import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.time.Instant;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TrackysatEventMapper {
 
-    public TrackysatEvent fromVmson(Vmson event) throws JsonProcessingException {
-        TrackysatEvent e = new TrackysatEvent();
+    private final Logger log = LoggerFactory.getLogger(TrackysatEventMapper.class);
+
+    public TrackyEvent fromVmson(Vmson event) throws JsonProcessingException {
+        TrackyEvent e = new TrackyEvent();
         VmsonBody body = event.getVmson();
 
-        String id = JSONUtils.toString(body.getOri());
-        e.setDeviceId(id);
+        e.setDeviceId(body.getOri().getUid());
 
         Instant trackingTime = body.getCon().stream().findFirst().map(VmsonCon::getEts).map(Ets::getTst).orElse(body.getEts().getTst());
         e.setCreatedDate(trackingTime);
@@ -31,5 +35,23 @@ public class TrackysatEventMapper {
         e.setOri(JSONUtils.toString(body.getOri()));
         e.setCon(JSONUtils.toString(body.getCon()));
         return e;
+    }
+
+    public TrackysatEventDTO toTrackysatEventDTO(TrackyEvent trackyEvent) {
+        TrackysatEventDTO mapped = new TrackysatEventDTO();
+        mapped.setCreatedDate(trackyEvent.getCreatedDate());
+        mapped.setDeviceId(trackyEvent.getDeviceId());
+        mapped.setEventDate(trackyEvent.getEventDate());
+        mapped.setUid(trackyEvent.getUid());
+        mapped.setVer(trackyEvent.getVer());
+        try {
+            mapped.setCon(JSONUtils.toJson(trackyEvent.getCon(), new TypeReference<List<VmsonCon>>() {}));
+            mapped.setDes(JSONUtils.toJson(trackyEvent.getDes(), Des.class));
+            mapped.setEts(JSONUtils.toJson(trackyEvent.getEts(), Ets.class));
+            mapped.setOri(JSONUtils.toJson(trackyEvent.getOri(), Ori.class));
+        } catch (Exception e) {
+            log.error("cannot parse");
+        }
+        return mapped;
     }
 }

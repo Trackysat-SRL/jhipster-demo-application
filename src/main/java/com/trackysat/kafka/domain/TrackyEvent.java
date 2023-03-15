@@ -1,5 +1,6 @@
 package com.trackysat.kafka.domain;
 
+import com.datastax.oss.driver.api.mapper.annotations.ClusteringColumn;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
 import com.datastax.oss.driver.api.mapper.annotations.NamingStrategy;
 import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
@@ -12,14 +13,14 @@ import java.time.Instant;
  */
 @Entity
 @NamingStrategy(convention = NamingConvention.SNAKE_CASE_INSENSITIVE)
-public class TrackysatEvent implements Serializable {
+public class TrackyEvent implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @PartitionKey(0)
+    @PartitionKey
     private String deviceId;
 
-    @PartitionKey(1)
+    @ClusteringColumn
     private Instant createdDate = Instant.now();
 
     private Instant eventDate = Instant.now();
@@ -108,10 +109,10 @@ public class TrackysatEvent implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof TrackysatEvent)) {
+        if (!(o instanceof TrackyEvent)) {
             return false;
         }
-        return deviceId != null && deviceId.equals(((TrackysatEvent) o).deviceId);
+        return deviceId != null && deviceId.equals(((TrackyEvent) o).deviceId);
     }
 
     @Override
