@@ -85,33 +85,33 @@ public class CassandraConsumerService {
 
     private void processEvent(String message) throws JsonProcessingException {
         log.debug("processEvent input: {}", message);
-        eventCounter.incrementAndGet();
-        if (isEnabled.get()) {
-            Vmson record = JSONUtils.toJson(message, Vmson.class);
-            TrackyEvent event = trackysatEventMapper.fromVmson(record);
-            trackyEventRepository.save(event);
-            deviceRepository.save(deviceMapper.fromVmson(record));
-        }
+        //        eventCounter.incrementAndGet();
+        //        if (isEnabled.get()) {
+        Vmson record = JSONUtils.toJson(message, Vmson.class);
+        TrackyEvent event = trackysatEventMapper.fromVmson(record);
+        trackyEventRepository.save(event);
+        deviceRepository.save(deviceMapper.fromVmson(record));
+        //        }
     }
 
     private void processError(String msg, String errorMessage) {
         log.debug("processError input: {}", msg);
-        errorCounter.incrementAndGet();
-        if (isEnabled.get()) {
-            String hash = null;
-            try {
-                MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                hash = new String(digest.digest(msg.getBytes(StandardCharsets.UTF_8)));
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }
-            if (hash == null) hash = "generic-id";
-            DeadLetterQueue dlq = new DeadLetterQueue();
-            dlq.setEventId(hash);
-            dlq.setData(msg);
-            dlq.setException(errorMessage);
-            deadLetterQueueRepository.save(dlq);
+        //        errorCounter.incrementAndGet();
+        //        if (isEnabled.get()) {
+        String hash = null;
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            hash = new String(digest.digest(msg.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
         }
+        if (hash == null) hash = "generic-id";
+        DeadLetterQueue dlq = new DeadLetterQueue();
+        dlq.setEventId(hash);
+        dlq.setData(msg);
+        dlq.setException(errorMessage);
+        deadLetterQueueRepository.save(dlq);
+        //        }
     }
 
     public AtomicBoolean getIsEnabled() {
