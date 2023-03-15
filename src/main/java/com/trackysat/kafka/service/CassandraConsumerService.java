@@ -5,8 +5,10 @@ import com.trackysat.kafka.domain.DeadLetterQueue;
 import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.domain.Vmson;
 import com.trackysat.kafka.repository.DeadLetterQueueRepository;
+import com.trackysat.kafka.repository.DeviceRepository;
 import com.trackysat.kafka.repository.TrackyEventRepository;
 import com.trackysat.kafka.service.dto.StatusDTO;
+import com.trackysat.kafka.service.mapper.DeviceMapper;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +40,10 @@ public class CassandraConsumerService {
 
     private final TrackysatEventMapper trackysatEventMapper;
 
+    private final DeviceMapper deviceMapper;
+
+    private final DeviceRepository deviceRepository;
+
     private final AtomicBoolean isEnabled = new AtomicBoolean(false);
     private final AtomicInteger eventCounter = new AtomicInteger(0);
     private final AtomicInteger errorCounter = new AtomicInteger(0);
@@ -46,11 +52,15 @@ public class CassandraConsumerService {
     public CassandraConsumerService(
         DeadLetterQueueRepository deadLetterQueueRepository,
         TrackyEventRepository trackyEventRepository,
-        TrackysatEventMapper trackysatEventMapper
+        TrackysatEventMapper trackysatEventMapper,
+        DeviceMapper deviceMapper,
+        DeviceRepository deviceRepository
     ) {
         this.deadLetterQueueRepository = deadLetterQueueRepository;
         this.trackyEventRepository = trackyEventRepository;
         this.trackysatEventMapper = trackysatEventMapper;
+        this.deviceMapper = deviceMapper;
+        this.deviceRepository = deviceRepository;
     }
 
     @KafkaListener(
@@ -80,6 +90,7 @@ public class CassandraConsumerService {
             Vmson record = JSONUtils.toJson(message, Vmson.class);
             TrackyEvent event = trackysatEventMapper.fromVmson(record);
             trackyEventRepository.save(event);
+            deviceRepository.save(deviceMapper.fromVmson(record));
         }
     }
 

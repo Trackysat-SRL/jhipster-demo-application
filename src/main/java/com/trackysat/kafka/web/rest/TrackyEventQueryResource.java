@@ -33,13 +33,13 @@ public class TrackyEventQueryResource {
         this.trackyEventQueryService = trackyEventQueryService;
     }
 
-    @GetMapping("/events/one")
+    @GetMapping("/events")
     public ResponseEntity<TrackysatEventDTO> getOne() {
-        log.debug("REST request to get one");
+        log.debug("REST request to get one TrackysatEventDTO random");
         return ResponseUtil.wrapOrNotFound(trackyEventQueryService.getOne());
     }
 
-    @GetMapping("/events/device-id/{id}")
+    @GetMapping("/events/{id}")
     public ResponseEntity<List<TrackysatEventDTO>> getList(
         @org.springdoc.api.annotations.ParameterObject Pageable pageable,
         @PathVariable String id,
@@ -49,11 +49,11 @@ public class TrackyEventQueryResource {
         log.debug("REST request to get a page of TrackysatEventDTO by deviceId: {}, {}, {}", id, from, to);
         Instant fromDate = Instant.parse(from);
         Instant toDate = Instant.parse(to);
-        List<TrackysatEventDTO> positions = trackyEventQueryService.getByDeviceIdAndDateRange(id, fromDate, toDate);
+        List<TrackysatEventDTO> trackyEvents = trackyEventQueryService.getByDeviceIdAndDateRange(id, fromDate, toDate);
 
         final int start = (int) pageable.getOffset();
-        final int end = Math.min((start + pageable.getPageSize()), positions.size());
-        final Page<TrackysatEventDTO> page = new PageImpl<>(positions.subList(start, end), pageable, positions.size());
+        final int end = Math.min((start + pageable.getPageSize()), trackyEvents.size());
+        final Page<TrackysatEventDTO> page = new PageImpl<>(trackyEvents.subList(start, end), pageable, trackyEvents.size());
 
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok().headers(headers).body(page.getContent());
