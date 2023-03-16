@@ -60,8 +60,8 @@ public class JobStatus implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof JobStatus)) return false;
-        JobStatus devices = (JobStatus) o;
-        return Objects.equals(getJobId(), devices.getJobId());
+        JobStatus jobStatus = (JobStatus) o;
+        return Objects.equals(getJobId(), jobStatus.getJobId());
     }
 
     @Override

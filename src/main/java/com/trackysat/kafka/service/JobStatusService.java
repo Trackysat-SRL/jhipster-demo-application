@@ -37,20 +37,20 @@ public class JobStatusService {
         return jobStatusRepository.findAll();
     }
 
-    public Optional<Instant> getLastDayProcessed() {
-        return this.getOne(DAILY_PROCESS_JOB).map(JobStatus::getUpdatedDate);
+    public Optional<Instant> getLastDayProcessed(String deviceId) {
+        return this.getOne(deviceId + "_" + DAILY_PROCESS_JOB).map(JobStatus::getUpdatedDate);
     }
 
-    public void setLastDayProcessed(LocalDate day, String data) {
-        this.setLastProcessed(DAILY_PROCESS_JOB, day, data);
+    public void setLastDayProcessed(String deviceId, LocalDate day, String data) {
+        this.setLastProcessed(deviceId + "_" + DAILY_PROCESS_JOB, day, data);
     }
 
-    public Optional<Instant> getLastMonthProcessed() {
-        return this.getOne(MONTHLY_PROCESS_JOB).map(JobStatus::getUpdatedDate);
+    public Optional<Instant> getLastMonthProcessed(String deviceId) {
+        return this.getOne(deviceId + "_" + MONTHLY_PROCESS_JOB).map(JobStatus::getUpdatedDate);
     }
 
-    public void setLastMonthProcessed(LocalDate day, String data) {
-        this.setLastProcessed(MONTHLY_PROCESS_JOB, day, data);
+    public void setLastMonthProcessed(String deviceId, LocalDate day, String data) {
+        this.setLastProcessed(deviceId + "_" + MONTHLY_PROCESS_JOB, day, data);
     }
 
     public void setLastProcessed(String jobId, LocalDate day, String data) {

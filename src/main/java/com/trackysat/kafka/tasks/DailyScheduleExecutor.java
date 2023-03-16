@@ -1,11 +1,11 @@
 package com.trackysat.kafka.tasks;
 
+import com.trackysat.kafka.domain.Device;
+import com.trackysat.kafka.service.DeviceService;
 import com.trackysat.kafka.service.JobStatusService;
 import com.trackysat.kafka.service.TrackyEventQueryService;
 import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,30 +21,45 @@ public class DailyScheduleExecutor {
 
     private final JobStatusService jobStatusService;
 
-    public DailyScheduleExecutor(TrackyEventQueryService trackyEventQueryService, JobStatusService jobStatusService) {
+    private final DeviceService deviceService;
+
+    public DailyScheduleExecutor(
+        TrackyEventQueryService trackyEventQueryService,
+        JobStatusService jobStatusService,
+        DeviceService deviceService
+    ) {
         this.trackyEventQueryService = trackyEventQueryService;
         this.jobStatusService = jobStatusService;
+        this.deviceService = deviceService;
     }
 
-    @Scheduled(cron = "0 1 * * * *")
-    public void dailyProcess() {
+    @Scheduled(cron = "*/2 * * * * *")
+    public void processAllDevices() {
+        deviceService.getAll().forEach(this::dailyProcess);
+    }
+
+    public void dailyProcess(Device device) {
         Instant startDate = Instant.now();
-        log.info("Started at " + startDate.toString());
-        Optional<Instant> lastDay = jobStatusService.getLastDayProcessed();
+        log.info("[{}] Started at " + startDate.toString(), device.getUid());
+        Optional<Instant> lastDay = jobStatusService.getLastDayProcessed(device.getUid());
         if (lastDay.isEmpty()) {
-            log.debug("Last day was not present, set to yesterday");
+            log.debug("[{}] Last day was not present, set to yesterday", device.getUid());
         } else {
-            log.debug("Last day processed: " + lastDay.toString());
+            log.debug("[{}] Last day processed: " + lastDay, device.getUid());
         }
         DateUtils
-            .getDatesBetween(lastDay.orElse(DateUtils.yesterday()), startDate)
+            .getDaysBetween(lastDay.orElse(DateUtils.yesterday()), startDate)
             .forEach(d -> {
-                log.debug("Started processing day " + d.toString());
-                trackyEventQueryService.processDay(d);
-                log.debug("Finished processing day " + d.toString());
-                jobStatusService.setLastDayProcessed(d, null);
+                try {
+                    log.debug("[{}] Started processing day " + d.toString(), device.getUid());
+                    trackyEventQueryService.processDay(device.getUid(), d);
+                    log.debug("[{}] Finished processing day " + d.toString(), device.getUid());
+                    jobStatusService.setLastDayProcessed(device.getUid(), d, null);
+                } catch (Exception e) {
+                    log.error("[{}] Error processing day " + d.toString(), device.getUid());
+                }
             });
         Instant endDate = Instant.now();
-        log.info("Finished at {}, in {}ms", endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
+        log.info("[{}] Finished at {}, in {}ms", device.getUid(), endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
     }
 }

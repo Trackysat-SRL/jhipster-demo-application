@@ -24,9 +24,21 @@ public class TrackyEventQueryService {
 
     private final TrackysatEventMapper trackysatEventMapper;
 
-    public TrackyEventQueryService(TrackyEventRepository trackyEventRepository, TrackysatEventMapper trackysatEventMapper) {
+    private final DailyAggregationService dailyAggregationService;
+
+    private final MonthlyAggregationService monthlyAggregationService;
+
+    public TrackyEventQueryService(
+        TrackyEventRepository trackyEventRepository,
+        TrackysatEventMapper trackysatEventMapper,
+        DeviceService deviceService,
+        DailyAggregationService dailyAggregationService,
+        MonthlyAggregationService monthlyAggregationService
+    ) {
         this.trackyEventRepository = trackyEventRepository;
         this.trackysatEventMapper = trackysatEventMapper;
+        this.dailyAggregationService = dailyAggregationService;
+        this.monthlyAggregationService = monthlyAggregationService;
     }
 
     public Optional<TrackysatEventDTO> getOne() {
@@ -41,11 +53,11 @@ public class TrackyEventQueryService {
             .collect(Collectors.toList());
     }
 
-    public void processDay(LocalDate day) {
+    public void processDay(String deviceId, LocalDate day) {
         log.info("Processing day " + day.toString());
     }
 
-    public void processMonth(LocalDate day) {
+    public void processMonth(String deviceId, LocalDate day) {
         log.info("Processing month " + day.toString());
     }
 }
