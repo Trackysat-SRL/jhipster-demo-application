@@ -4,6 +4,7 @@ import com.trackysat.kafka.repository.TrackyEventRepository;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,5 +39,13 @@ public class TrackyEventQueryService {
             .stream()
             .map(trackysatEventMapper::toTrackysatEventDTO)
             .collect(Collectors.toList());
+    }
+
+    public void processDay(LocalDate day) {
+        log.info("Processing day " + day.toString());
+    }
+
+    public void processMonth(LocalDate day) {
+        log.info("Processing month " + day.toString());
     }
 }

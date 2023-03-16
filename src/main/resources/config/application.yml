@@ -154,6 +154,7 @@ spring:
       console-available: true
 
 server:
+  shutdown: immediate
   servlet:
     session:
       cookie:
