@@ -6,6 +6,8 @@ import com.trackysat.kafka.service.JobStatusService;
 import com.trackysat.kafka.service.TrackyEventQueryService;
 import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +37,8 @@ public class DailyScheduleExecutor {
 
     @Scheduled(cron = "*/2 * * * * *")
     public void processAllDevices() {
-        deviceService.getAll().forEach(this::dailyProcess);
+        //        deviceService.getAll().forEach(this::dailyProcess);
+        List.of(deviceService.getOne("359632104827701").orElseThrow()).forEach(this::dailyProcess);
     }
 
     public void dailyProcess(Device device) {
@@ -47,18 +50,16 @@ public class DailyScheduleExecutor {
         } else {
             log.debug("[{}] Last day processed: " + lastDay, device.getUid());
         }
-        DateUtils
-            .getDaysBetween(lastDay.orElse(DateUtils.yesterday()), startDate)
-            .forEach(d -> {
-                try {
-                    log.debug("[{}] Started processing day " + d.toString(), device.getUid());
-                    trackyEventQueryService.processDay(device.getUid(), d);
-                    log.debug("[{}] Finished processing day " + d.toString(), device.getUid());
-                    jobStatusService.setLastDayProcessed(device.getUid(), d, null);
-                } catch (Exception e) {
-                    log.error("[{}] Error processing day " + d.toString(), device.getUid());
-                }
-            });
+        for (LocalDate d : DateUtils.getDaysBetween(lastDay.orElse(DateUtils.yesterday()), startDate)) {
+            try {
+                log.debug("[{}] Started processing day " + d.toString(), device.getUid());
+                trackyEventQueryService.processDay(device.getUid(), d);
+                log.debug("[{}] Finished processing day " + d.toString(), device.getUid());
+                jobStatusService.setLastDayProcessed(device.getUid(), d, null);
+            } catch (Exception e) {
+                log.error("[{}] Error processing day " + d.toString(), device.getUid());
+            }
+        }
         Instant endDate = Instant.now();
         log.info("[{}] Finished at {}, in {}ms", device.getUid(), endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
     }

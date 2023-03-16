@@ -41,23 +41,23 @@ public class JobStatusService {
         return this.getOne(deviceId + "_" + DAILY_PROCESS_JOB).map(JobStatus::getUpdatedDate);
     }
 
-    public void setLastDayProcessed(String deviceId, LocalDate day, String data) {
-        this.setLastProcessed(deviceId + "_" + DAILY_PROCESS_JOB, day, data);
+    public JobStatus setLastDayProcessed(String deviceId, LocalDate day, String data) {
+        return this.setLastProcessed(deviceId + "_" + DAILY_PROCESS_JOB, day, data);
     }
 
     public Optional<Instant> getLastMonthProcessed(String deviceId) {
         return this.getOne(deviceId + "_" + MONTHLY_PROCESS_JOB).map(JobStatus::getUpdatedDate);
     }
 
-    public void setLastMonthProcessed(String deviceId, LocalDate day, String data) {
-        this.setLastProcessed(deviceId + "_" + MONTHLY_PROCESS_JOB, day, data);
+    public JobStatus setLastMonthProcessed(String deviceId, LocalDate day, String data) {
+        return this.setLastProcessed(deviceId + "_" + MONTHLY_PROCESS_JOB, day, data);
     }
 
-    public void setLastProcessed(String jobId, LocalDate day, String data) {
+    public JobStatus setLastProcessed(String jobId, LocalDate day, String data) {
         JobStatus jobStatusUpdated = new JobStatus();
         jobStatusUpdated.setJobId(jobId);
         jobStatusUpdated.setUpdatedDate(day.atStartOfDay().toInstant(ZoneOffset.UTC));
         jobStatusUpdated.setData(data);
-        this.jobStatusRepository.save(jobStatusUpdated);
+        return this.jobStatusRepository.save(jobStatusUpdated);
     }
 }

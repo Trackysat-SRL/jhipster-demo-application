@@ -6,6 +6,7 @@ import com.trackysat.kafka.service.JobStatusService;
 import com.trackysat.kafka.service.TrackyEventQueryService;
 import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,18 +48,16 @@ public class MonthlyScheduleExecutor {
         } else {
             log.debug("[{}] Last month processed: " + lastDay, device.getUid());
         }
-        DateUtils
-            .getMonthsBetween(lastDay.orElse(DateUtils.lastMonth()), startDate)
-            .forEach(d -> {
-                try {
-                    log.debug("[{}] Started processing month " + d.getMonth().toString(), device.getUid());
-                    trackyEventQueryService.processMonth(device.getUid(), d);
-                    log.debug("[{}] Finished processing month " + d.getMonth().toString(), device.getUid());
-                    jobStatusService.setLastMonthProcessed(device.getUid(), d, null);
-                } catch (Exception e) {
-                    log.error("[{}] Error processing month " + d.getMonth().toString(), device.getUid());
-                }
-            });
+        for (LocalDate d : DateUtils.getMonthsBetween(lastDay.orElse(DateUtils.lastMonth()), startDate)) {
+            try {
+                log.debug("[{}] Started processing month " + d.getMonth().toString(), device.getUid());
+                trackyEventQueryService.processMonth(device.getUid(), d);
+                log.debug("[{}] Finished processing month " + d.getMonth().toString(), device.getUid());
+                jobStatusService.setLastMonthProcessed(device.getUid(), d, null);
+            } catch (Exception e) {
+                log.error("[{}] Error processing month " + d.getMonth().toString(), device.getUid());
+            }
+        }
         Instant endDate = Instant.now();
         log.info("[{}] Finished at {}, in {}ms", device.getUid(), endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
     }

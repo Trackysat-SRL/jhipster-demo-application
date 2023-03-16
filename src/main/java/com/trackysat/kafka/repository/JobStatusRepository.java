@@ -56,7 +56,6 @@ public class JobStatusRepository {
         if (violations != null && !violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }
-        //        JobStatus oldJobStatus = jobStatusDao.get(jobStatus.getCustomerId()).orElse(null);
         BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
         batch.addStatement(jobStatusDao.saveQuery(jobStatus));
         session.execute(batch.build());
