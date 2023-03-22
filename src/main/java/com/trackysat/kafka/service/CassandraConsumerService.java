@@ -44,7 +44,7 @@ public class CassandraConsumerService {
 
     private final DeviceRepository deviceRepository;
 
-    private final AtomicBoolean isEnabled = new AtomicBoolean(false);
+    private final AtomicBoolean isEnabled = new AtomicBoolean(true);
     private final AtomicInteger eventCounter = new AtomicInteger(0);
     private final AtomicInteger errorCounter = new AtomicInteger(0);
     private Instant startDate = Instant.now();
