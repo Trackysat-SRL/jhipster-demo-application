@@ -3,17 +3,14 @@ package com.trackysat.kafka.repository;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.PagingIterable;
-import com.datastax.oss.driver.api.core.cql.BatchStatement;
-import com.datastax.oss.driver.api.core.cql.BatchStatementBuilder;
-import com.datastax.oss.driver.api.core.cql.BoundStatement;
-import com.datastax.oss.driver.api.core.cql.DefaultBatchType;
-import com.datastax.oss.driver.api.core.type.codec.registry.CodecRegistry;
+import com.datastax.oss.driver.api.core.cql.*;
 import com.datastax.oss.driver.api.mapper.annotations.*;
 import com.trackysat.kafka.domain.DailyAggregation;
-import com.trackysat.kafka.domain.aggregations.PositionDTO;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import javax.validation.Validator;
@@ -36,18 +33,46 @@ public class DailyAggregationRepository {
 
     private final DailyAggregationDao dailyAggregationDao;
 
+    private final PreparedStatement findOne;
+
+    private final PreparedStatement findAllByDeviceIdAndDates;
+
     public DailyAggregationRepository(CqlSession session, Validator validator, CassandraProperties cassandraProperties) {
         this.session = session;
         this.validator = validator;
         DailyAggregationTokenMapper dailyAggregationTokenMapper = new DailyAggregationTokenMapperBuilder(session).build();
         dailyAggregationDao =
             dailyAggregationTokenMapper.dailyAggregationTokenDao(CqlIdentifier.fromCql(cassandraProperties.getKeyspaceName()));
+
+        findOne = session.prepare("SELECT device_id, aggregated_date " + "FROM daily_aggregation limit 1");
+        findAllByDeviceIdAndDates =
+            session.prepare(
+                "SELECT * FROM daily_aggregation " +
+                "WHERE device_id = :device_id and aggregated_date >= :from_date and aggregated_date < :to_date limit 100"
+            );
+    }
+
+    public List<DailyAggregation> findOneByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
+        BoundStatement stmt = findAllByDeviceIdAndDates
+            .bind()
+            .setString("device_id", deviceId)
+            .setInstant("from_date", dateFrom)
+            .setInstant("to_date", dateTo);
+        ResultSet rs = session.execute(stmt);
+        return rs.all().stream().map(this::fromRow).collect(Collectors.toList());
     }
 
     // -- CRUD -- //
 
-    public Optional<DailyAggregation> findById(String id) {
-        return dailyAggregationDao.get(id);
+    public Optional<DailyAggregation> findOne() {
+        ResultSet rs = session.execute(findOne.bind());
+        return Optional
+            .ofNullable(rs.one())
+            .flatMap(row -> dailyAggregationDao.get(row.getString("device_id"), row.getInstant("aggregated_date")));
+    }
+
+    public Optional<DailyAggregation> findById(String id, Instant date) {
+        return dailyAggregationDao.get(id, date);
     }
 
     public List<DailyAggregation> findAll() {
@@ -71,12 +96,20 @@ public class DailyAggregationRepository {
         batch.addStatement(dailyAggregationDao.deleteQuery(dailyAggregation));
         session.execute(batch.build());
     }
+
+    private DailyAggregation fromRow(Row row) {
+        DailyAggregation te = new DailyAggregation();
+        te.setDeviceId(row.getString("device_id"));
+        te.setAggregatedDate(row.getInstant("aggregated_date"));
+        te.setPositions(row.getString("positions"));
+        return te;
+    }
 }
 
 @Dao
 interface DailyAggregationDao {
     @Select
-    Optional<DailyAggregation> get(String dailyAggregationId);
+    Optional<DailyAggregation> get(String deviceId, Instant aggregatedDate);
 
     @Select
     PagingIterable<DailyAggregation> findAll();

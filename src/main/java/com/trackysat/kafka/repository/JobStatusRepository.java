@@ -62,10 +62,16 @@ public class JobStatusRepository {
         return jobStatus;
     }
 
-    public void delete(JobStatus jobStatus) {
+    public boolean delete(String id) {
         BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
-        batch.addStatement(jobStatusDao.deleteQuery(jobStatus));
-        session.execute(batch.build());
+        Optional<JobStatus> js = jobStatusDao.get(id);
+        if (js.isEmpty()) {
+            return false;
+        } else {
+            batch.addStatement(jobStatusDao.deleteQuery(js.get()));
+            session.execute(batch.build());
+            return true;
+        }
     }
 }
 

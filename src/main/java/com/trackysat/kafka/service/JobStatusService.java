@@ -60,4 +60,8 @@ public class JobStatusService {
         jobStatusUpdated.setData(data);
         return this.jobStatusRepository.save(jobStatusUpdated);
     }
+
+    public boolean deleteOne(String id) {
+        return jobStatusRepository.delete(id);
+    }
 }

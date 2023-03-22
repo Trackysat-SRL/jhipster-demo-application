@@ -47,8 +47,7 @@ public class TrackyEventRepository {
 
         findAllByDeviceIdAndDates =
             session.prepare(
-                "SELECT * FROM tracky_event " +
-                "WHERE device_id = :device_id and created_date >= :from_date and created_date < :to_date limit 100"
+                "SELECT * FROM tracky_event " + "WHERE device_id = :device_id and created_date >= :from_date and created_date < :to_date"
             );
     }
 

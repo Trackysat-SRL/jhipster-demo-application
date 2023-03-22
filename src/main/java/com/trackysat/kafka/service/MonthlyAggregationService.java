@@ -2,6 +2,8 @@ package com.trackysat.kafka.service;
 
 import com.trackysat.kafka.domain.MonthlyAggregation;
 import com.trackysat.kafka.repository.MonthlyAggregationRepository;
+import com.trackysat.kafka.service.dto.DailyAggregationDTO;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -22,11 +24,15 @@ public class MonthlyAggregationService {
         this.monthlyAggregationRepository = monthlyAggregationRepository;
     }
 
-    public Optional<MonthlyAggregation> getOne(String id) {
-        return monthlyAggregationRepository.findById(id);
+    public Optional<MonthlyAggregation> getOne() {
+        return monthlyAggregationRepository.findOne();
     }
 
     public List<MonthlyAggregation> getAll() {
         return monthlyAggregationRepository.findAll();
+    }
+
+    public List<DailyAggregationDTO> getByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
+        return null;
     }
 }

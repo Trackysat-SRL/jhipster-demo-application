@@ -1,13 +1,12 @@
 package com.trackysat.kafka.domain;
 
+import com.datastax.oss.driver.api.mapper.annotations.ClusteringColumn;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
 import com.datastax.oss.driver.api.mapper.annotations.NamingStrategy;
 import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
 import com.datastax.oss.driver.api.mapper.entity.naming.NamingConvention;
-import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import java.io.Serializable;
 import java.time.Instant;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -22,7 +21,8 @@ public class MonthlyAggregation implements Serializable {
     @PartitionKey
     String deviceId;
 
-    Instant timestamp = Instant.now();
+    @ClusteringColumn
+    Instant aggregatedDate = Instant.now();
 
     String positions;
 
@@ -34,12 +34,12 @@ public class MonthlyAggregation implements Serializable {
         this.deviceId = deviceId;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public Instant getAggregatedDate() {
+        return aggregatedDate;
     }
 
-    public void setTimestamp(Instant timestamp) {
-        this.timestamp = timestamp;
+    public void setAggregatedDate(Instant aggregatedDate) {
+        this.aggregatedDate = aggregatedDate;
     }
 
     public String getPositions() {
@@ -56,7 +56,8 @@ public class MonthlyAggregation implements Serializable {
         if (!(o instanceof MonthlyAggregation)) return false;
         MonthlyAggregation dailyAggregation = (MonthlyAggregation) o;
         return (
-            Objects.equals(getDeviceId(), dailyAggregation.getDeviceId()) && Objects.equals(getTimestamp(), dailyAggregation.getTimestamp())
+            Objects.equals(getDeviceId(), dailyAggregation.getDeviceId()) &&
+            Objects.equals(getAggregatedDate(), dailyAggregation.getAggregatedDate())
         );
     }
 
@@ -71,7 +72,7 @@ public class MonthlyAggregation implements Serializable {
     public String toString() {
         return "DailyAggregation{" +
             "deviceId='" + deviceId + '\'' +
-            ", timestamp=" + timestamp +
+            ", timestamp=" + aggregatedDate +
             '}';
     }
 }

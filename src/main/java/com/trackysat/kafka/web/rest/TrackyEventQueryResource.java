@@ -1,6 +1,9 @@
 package com.trackysat.kafka.web.rest;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.TrackyEventQueryService;
+import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import java.time.Instant;
 import java.util.List;
@@ -29,8 +32,14 @@ public class TrackyEventQueryResource {
 
     private final TrackyEventQueryService trackyEventQueryService;
 
-    public TrackyEventQueryResource(TrackyEventQueryService trackyEventQueryService) {
+    private final AggregationDelegatorService aggregationDelegatorService;
+
+    public TrackyEventQueryResource(
+        TrackyEventQueryService trackyEventQueryService,
+        AggregationDelegatorService aggregationDelegatorService
+    ) {
         this.trackyEventQueryService = trackyEventQueryService;
+        this.aggregationDelegatorService = aggregationDelegatorService;
     }
 
     @GetMapping("/events")
@@ -57,5 +66,34 @@ public class TrackyEventQueryResource {
 
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
+    @GetMapping("/data")
+    public ResponseEntity<DailyAggregationDTO> getOneAggregation() {
+        log.debug("REST request to get one DailyAggregationDTO random");
+        return ResponseUtil.wrapOrNotFound(aggregationDelegatorService.getOne());
+    }
+
+    @GetMapping("/data/{id}")
+    public ResponseEntity<List<DailyAggregationDTO>> getListAggregation(
+        @org.springdoc.api.annotations.ParameterObject Pageable pageable,
+        @PathVariable String id,
+        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
+    ) {
+        log.debug("REST request to get a page of DailyAggregationDTO by deviceId: {}, {}, {}", id, from, to);
+        Instant fromDate = Instant.parse(from);
+        Instant toDate = Instant.parse(to);
+        try {
+            List<DailyAggregationDTO> trackyEvents = aggregationDelegatorService.getByDeviceIdAndDateRange(id, fromDate, toDate);
+            final int start = (int) pageable.getOffset();
+            final int end = Math.min((start + pageable.getPageSize()), trackyEvents.size());
+            final Page<DailyAggregationDTO> page = new PageImpl<>(trackyEvents.subList(start, end), pageable, trackyEvents.size());
+
+            HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
+            return ResponseEntity.ok().headers(headers).body(page.getContent());
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.unprocessableEntity().body(null);
+        }
     }
 }
