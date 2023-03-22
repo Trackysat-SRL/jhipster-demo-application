@@ -12,10 +12,11 @@ public class DateUtils {
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 
-    // make startDate exclusive with 1 DAY added to startDate
     public static List<LocalDate> getDaysBetween(Instant startDate, Instant endDate) {
+        // make startDate exclusive with 1 DAY added to startDate
+        Instant startDateFixed = startDate.plus(1, ChronoUnit.DAYS);
         return LocalDate
-            .ofInstant(startDate.plus(1, ChronoUnit.DAYS), ZoneId.systemDefault())
+            .ofInstant(startDateFixed, ZoneId.systemDefault())
             .datesUntil(LocalDate.ofInstant(endDate, ZoneId.systemDefault()))
             .collect(Collectors.toList());
     }
@@ -27,13 +28,13 @@ public class DateUtils {
             .collect(Collectors.toList());
     }
 
-    public static Instant yesterday() {
+    public static Instant twoDaysAgo() {
         Instant now = Instant.now();
-        return now.minus(1, ChronoUnit.DAYS);
+        return now.minus(2, ChronoUnit.DAYS);
     }
 
-    public static Instant lastMonth() {
+    public static Instant twoMonthAgo() {
         Instant now = Instant.now();
-        return now.minus(1, ChronoUnit.MONTHS);
+        return now.minus(2, ChronoUnit.MONTHS);
     }
 }

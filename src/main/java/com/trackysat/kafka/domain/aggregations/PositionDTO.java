@@ -1,16 +1,28 @@
 package com.trackysat.kafka.domain.aggregations;
 
+import java.time.Instant;
+import java.util.Objects;
+
 public class PositionDTO {
 
+    private Instant timestamp;
     private Double longitude; // lon
     private Double latitude; // lat
     private Integer altitude; // alt
     private Integer speed; // spe
     private Integer numberOfSatellites; // snr
-    private Integer signal; // sig
     private Integer direction; // dir
-    private Integer fix; // fix Fix State Enumeration Enum
+    private String signal; // sig
+    private String fix; // fix Fix State Enumeration Enum
     private String typ; // Localization system type Enum
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Instant timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public Double getLongitude() {
         return longitude;
@@ -52,11 +64,11 @@ public class PositionDTO {
         this.numberOfSatellites = numberOfSatellites;
     }
 
-    public Integer getSignal() {
+    public String getSignal() {
         return signal;
     }
 
-    public void setSignal(Integer signal) {
+    public void setSignal(String signal) {
         this.signal = signal;
     }
 
@@ -68,11 +80,11 @@ public class PositionDTO {
         this.direction = direction;
     }
 
-    public Integer getFix() {
+    public String getFix() {
         return fix;
     }
 
-    public void setFix(Integer fix) {
+    public void setFix(String fix) {
         this.fix = fix;
     }
 
@@ -82,5 +94,23 @@ public class PositionDTO {
 
     public void setTyp(String typ) {
         this.typ = typ;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PositionDTO)) return false;
+        PositionDTO that = (PositionDTO) o;
+        return (
+            getLongitude().equals(that.getLongitude()) &&
+            getLatitude().equals(that.getLatitude()) &&
+            getAltitude().equals(that.getAltitude()) &&
+            getSpeed().equals(that.getSpeed())
+        );
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getLongitude(), getLatitude(), getAltitude(), getSpeed());
     }
 }

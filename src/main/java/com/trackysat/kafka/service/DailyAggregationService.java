@@ -47,6 +47,7 @@ public class DailyAggregationService {
         da.setDeviceId(deviceId);
         da.setTimestamp(day);
         da.setPositions(processPositions(eventDTOS));
+        this.dailyAggregationRepository.save(da);
     }
 
     private String processPositions(List<TrackysatEventDTO> events) throws JsonProcessingException {
@@ -56,18 +57,21 @@ public class DailyAggregationService {
             .flatMap(List::stream)
             .map(e -> {
                 PositionDTO p = new PositionDTO();
+                p.setTimestamp(e.getEts().getTst());
                 p.setAltitude(e.getSat().getAlt());
                 p.setDirection(e.getSat().getDir());
                 p.setLatitude(e.getSat().getLat());
                 p.setLongitude(e.getSat().getLon());
-                p.setFix(Integer.parseInt(e.getSat().getFix()));
+                p.setFix(e.getSat().getFix());
                 p.setNumberOfSatellites(e.getSat().getSnr());
-                p.setSignal(Integer.parseInt(e.getSat().getSig()));
+                p.setSignal(e.getSat().getSig());
                 p.setTyp(e.getSat().getTyp());
                 p.setSpeed(e.getSat().getSpe());
                 return p;
             })
+            .distinct()
             .collect(Collectors.toList());
+        log.debug("Total unique positions {}", positions.size());
         return JSONUtils.toString(positions);
     }
 }

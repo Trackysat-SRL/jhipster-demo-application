@@ -7,6 +7,7 @@ import com.trackysat.kafka.service.TrackyEventQueryService;
 import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,18 +45,20 @@ public class MonthlyScheduleExecutor {
         log.info("[{}] Started at " + startDate.toString(), device.getUid());
         Optional<Instant> lastDay = jobStatusService.getLastMonthProcessed(device.getUid());
         if (lastDay.isEmpty()) {
-            log.debug("[{}] Last month was not present, set to yesterday", device.getUid());
+            log.debug("[{}] Last month was not present, set to last month", device.getUid());
         } else {
             log.debug("[{}] Last month processed: " + lastDay, device.getUid());
         }
-        for (LocalDate d : DateUtils.getMonthsBetween(lastDay.orElse(DateUtils.lastMonth()), startDate)) {
+        List<LocalDate> months = DateUtils.getMonthsBetween(lastDay.orElse(DateUtils.twoMonthAgo()), startDate);
+        log.debug("[{}] Months to process: " + months.size(), device.getUid());
+        for (LocalDate d : months) {
             try {
                 log.debug("[{}] Started processing month " + d.getMonth().toString(), device.getUid());
                 trackyEventQueryService.processMonth(device.getUid(), d);
                 log.debug("[{}] Finished processing month " + d.getMonth().toString(), device.getUid());
                 jobStatusService.setLastMonthProcessed(device.getUid(), d, null);
             } catch (Exception e) {
-                log.error("[{}] Error processing month " + d.getMonth().toString(), device.getUid());
+                log.error("[{}] [{}] Error processing month. ERROR: {}", device.getUid(), d.getMonth(), e.getMessage());
             }
         }
         Instant endDate = Instant.now();

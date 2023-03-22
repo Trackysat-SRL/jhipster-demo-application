@@ -2,7 +2,6 @@ package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.TrackyEvent;
-import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.repository.TrackyEventRepository;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
@@ -10,7 +9,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -60,11 +58,13 @@ public class TrackyEventQueryService {
     }
 
     public void processDay(String deviceId, LocalDate day) throws JsonProcessingException {
-        log.info("[{}] Processing day " + day.toString(), deviceId);
+        log.info("[{}] [{}] Start processing day", deviceId, day);
         Instant startOfDay = day.atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant endOfDay = day.atStartOfDay().toInstant(ZoneOffset.UTC).plus(1, ChronoUnit.DAYS);
         List<TrackyEvent> events = trackyEventRepository.findOneByDeviceIdAndDateRange(deviceId, startOfDay, endOfDay);
+        log.info("[{}] [{}] Events found: " + events.size(), deviceId, day);
         dailyAggregationService.process(deviceId, startOfDay, events);
+        log.info("[{}] [{}] Finished processing day", deviceId, day);
     }
 
     public void processMonth(String deviceId, LocalDate day) {

@@ -35,10 +35,9 @@ public class DailyScheduleExecutor {
         this.deviceService = deviceService;
     }
 
-    @Scheduled(cron = "*/2 * * * * *")
+    @Scheduled(cron = "0 */3 * * * *")
     public void processAllDevices() {
-        //        deviceService.getAll().forEach(this::dailyProcess);
-        List.of(deviceService.getOne("359632104827701").orElseThrow()).forEach(this::dailyProcess);
+        deviceService.getAll().forEach(this::dailyProcess);
     }
 
     public void dailyProcess(Device device) {
@@ -50,14 +49,16 @@ public class DailyScheduleExecutor {
         } else {
             log.debug("[{}] Last day processed: " + lastDay, device.getUid());
         }
-        for (LocalDate d : DateUtils.getDaysBetween(lastDay.orElse(DateUtils.yesterday()), startDate)) {
+        List<LocalDate> days = DateUtils.getDaysBetween(lastDay.orElse(DateUtils.twoDaysAgo()), startDate);
+        log.debug("[{}] Days to process: " + days.size(), device.getUid());
+        for (LocalDate d : days) {
             try {
                 log.debug("[{}] Started processing day " + d.toString(), device.getUid());
                 trackyEventQueryService.processDay(device.getUid(), d);
-                log.debug("[{}] Finished processing day " + d.toString(), device.getUid());
+                log.debug("[{}] Finished processing day " + d, device.getUid());
                 jobStatusService.setLastDayProcessed(device.getUid(), d, null);
             } catch (Exception e) {
-                log.error("[{}] Error processing day " + d.toString(), device.getUid());
+                log.error("[{}] [{}] Error processing day. ERROR: {}", device.getUid(), d, e.getMessage());
             }
         }
         Instant endDate = Instant.now();
