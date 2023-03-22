@@ -26,6 +26,8 @@ public class DailyAggregation implements Serializable {
 
     String positions;
 
+    String sensors;
+
     public String getDeviceId() {
         return deviceId;
     }
@@ -48,6 +50,14 @@ public class DailyAggregation implements Serializable {
 
     public void setPositions(String positions) {
         this.positions = positions;
+    }
+
+    public String getSensors() {
+        return sensors;
+    }
+
+    public void setSensors(String sensors) {
+        this.sensors = sensors;
     }
 
     @Override

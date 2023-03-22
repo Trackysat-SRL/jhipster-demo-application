@@ -1,12 +1,17 @@
 package com.trackysat.kafka.web.rest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
+import com.trackysat.kafka.domain.aggregations.SensorValDTO;
 import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.TrackyEventQueryService;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -92,6 +97,27 @@ public class TrackyEventQueryResource {
 
             HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
             return ResponseEntity.ok().headers(headers).body(page.getContent());
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.unprocessableEntity().body(null);
+        }
+    }
+
+    @GetMapping("/distance/{id}")
+    public ResponseEntity<Map<String, Integer>> getTotalDistance(
+        @org.springdoc.api.annotations.ParameterObject Pageable pageable,
+        @PathVariable String id,
+        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
+    ) {
+        log.debug("REST request to get total distance by deviceId: {}, {}, {}", id, from, to);
+        Instant fromDate = Instant.parse(from);
+        Instant toDate = Instant.parse(to);
+        try {
+            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(id, fromDate, toDate);
+            SensorStatsDTO stats = sensors.get("TotalVehicleDistance");
+            Integer min = stats.getValues().stream().map(SensorValDTO::getValue).min(Comparator.naturalOrder()).orElse(0);
+            Integer max = stats.getValues().stream().map(SensorValDTO::getValue).max(Comparator.naturalOrder()).orElse(0);
+            return ResponseEntity.ok().body(Collections.singletonMap("distance", max - min));
         } catch (JsonProcessingException e) {
             return ResponseEntity.unprocessableEntity().body(null);
         }

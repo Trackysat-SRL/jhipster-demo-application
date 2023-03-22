@@ -26,6 +26,8 @@ public class MonthlyAggregation implements Serializable {
 
     String positions;
 
+    String sensors;
+
     public String getDeviceId() {
         return deviceId;
     }
@@ -50,6 +52,14 @@ public class MonthlyAggregation implements Serializable {
         this.positions = positions;
     }
 
+    public String getSensors() {
+        return sensors;
+    }
+
+    public void setSensors(String sensors) {
+        this.sensors = sensors;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -72,7 +82,7 @@ public class MonthlyAggregation implements Serializable {
     public String toString() {
         return "DailyAggregation{" +
             "deviceId='" + deviceId + '\'' +
-            ", timestamp=" + aggregatedDate +
+            ", aggregatedDate=" + aggregatedDate +
             '}';
     }
 }

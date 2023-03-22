@@ -13,3 +13,10 @@ CREATE TABLE IF NOT EXISTS monthly_aggregation
     positions       text,
     primary key (device_id, aggregated_date)
 );
+
+alter table daily_aggregation
+    add sensors text;
+
+alter table monthly_aggregation
+    add sensors text;
+

@@ -38,7 +38,7 @@ public class DateUtils {
 
     public static Instant twoDaysAgo() {
         Instant now = Instant.now();
-        return now.minus(2, ChronoUnit.DAYS);
+        return now.minus(7, ChronoUnit.DAYS);
     }
 
     public static Instant twoMonthAgo() {
