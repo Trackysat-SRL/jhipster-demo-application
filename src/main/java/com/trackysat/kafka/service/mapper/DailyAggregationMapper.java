@@ -13,7 +13,7 @@ import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.mapstruct.ap.internal.util.Strings;
+import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
