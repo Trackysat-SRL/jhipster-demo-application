@@ -169,4 +169,27 @@ public class AggregationDelegatorService {
         Instant endDate = Instant.now();
         log.info("[{}] Finished at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
     }
+
+    // TODO merge with values, add merge for other fields, validate data in db, reprocess
+    public SensorStatsDTO mergeSensors(SensorStatsDTO a, SensorStatsDTO b) {
+        try {
+            if (b.getFirstValue().getCreationDate().getEpochSecond() < a.getFirstValue().getCreationDate().getEpochSecond()) {
+                a.setFirstValue(b.getFirstValue());
+            }
+            if (b.getLastValue().getCreationDate().getEpochSecond() > a.getLastValue().getCreationDate().getEpochSecond()) {
+                a.setLastValue(b.getLastValue());
+            }
+            a.setSum(a.getSum() + b.getSum());
+            if (b.getMin() < a.getMin()) {
+                a.setMin(b.getMin());
+            }
+            if (b.getMax() < a.getMax()) {
+                a.setMax(b.getMax());
+            }
+            a.setAvg((b.getAvg() + a.getAvg()) / 2);
+            return a;
+        } catch (Exception e) {
+            return b;
+        }
+    }
 }

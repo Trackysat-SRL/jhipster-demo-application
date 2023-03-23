@@ -1,5 +1,6 @@
 package com.trackysat.kafka.repository;
 
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.PagingIterable;
@@ -17,6 +18,7 @@ import javax.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.cassandra.CassandraProperties;
+import org.springframework.data.cassandra.repository.Consistency;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -48,7 +50,7 @@ public class DailyAggregationRepository {
         findAllByDeviceIdAndDates =
             session.prepare(
                 "SELECT * FROM daily_aggregation " +
-                "WHERE device_id = :device_id and aggregated_date >= :from_date and aggregated_date < :to_date limit 100"
+                "WHERE device_id = :device_id and aggregated_date >= :from_date and aggregated_date < :to_date"
             );
     }
 
@@ -58,7 +60,7 @@ public class DailyAggregationRepository {
             .setString("device_id", deviceId)
             .setInstant("from_date", dateFrom)
             .setInstant("to_date", dateTo);
-        ResultSet rs = session.execute(stmt);
+        ResultSet rs = session.execute(stmt.setConsistencyLevel(ConsistencyLevel.LOCAL_ONE));
         return rs.all().stream().map(this::fromRow).collect(Collectors.toList());
     }
 
