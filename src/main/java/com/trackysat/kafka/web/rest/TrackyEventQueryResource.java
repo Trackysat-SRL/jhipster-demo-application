@@ -155,7 +155,7 @@ public class TrackyEventQueryResource {
             Map<String, SensorStatsDTO> stats = sensors
                 .entrySet()
                 .stream()
-                .filter(e -> e.getKey().toLowerCase().contains(sensor))
+                .filter(e -> e.getKey().toLowerCase().contains(sensor.toLowerCase()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
             return ResponseEntity.ok().body(stats);
         } catch (JsonProcessingException e) {
