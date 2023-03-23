@@ -1,6 +1,7 @@
 package com.trackysat.kafka.web.rest;
 
 import com.trackysat.kafka.domain.JobStatus;
+import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.JobStatusService;
 import java.util.List;
 import org.slf4j.Logger;
@@ -27,8 +28,11 @@ public class JobStatusResource {
 
     private final JobStatusService jobStatusService;
 
-    public JobStatusResource(JobStatusService jobStatusService) {
+    private final AggregationDelegatorService aggregationDelegatorService;
+
+    public JobStatusResource(JobStatusService jobStatusService, AggregationDelegatorService aggregationDelegatorService) {
         this.jobStatusService = jobStatusService;
+        this.aggregationDelegatorService = aggregationDelegatorService;
     }
 
     @GetMapping("/jobs")
@@ -53,6 +57,14 @@ public class JobStatusResource {
     @DeleteMapping("/jobs/{id}")
     public ResponseEntity<Boolean> deleteOne(@PathVariable String id) {
         log.debug("REST request to delete JobStatus by id: {}", id);
-        return ResponseEntity.ok().body(jobStatusService.deleteOne(id));
+        boolean reprocess = jobStatusService.deleteOne(id);
+        if (reprocess) {
+            if (id.contains("daily")) {
+                aggregationDelegatorService.dailyProcess(jobStatusService.getDeviceId(id));
+            } else if (id.contains("monthly")) {
+                aggregationDelegatorService.monthlyProcess(jobStatusService.getDeviceId(id));
+            }
+        }
+        return ResponseEntity.ok().body(reprocess);
     }
 }

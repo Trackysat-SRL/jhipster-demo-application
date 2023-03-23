@@ -64,4 +64,8 @@ public class JobStatusService {
     public boolean deleteOne(String id) {
         return jobStatusRepository.delete(id);
     }
+
+    public String getDeviceId(String jobId) {
+        return jobId.replace("_" + DAILY_PROCESS_JOB, "").replace("_" + MONTHLY_PROCESS_JOB, "");
+    }
 }

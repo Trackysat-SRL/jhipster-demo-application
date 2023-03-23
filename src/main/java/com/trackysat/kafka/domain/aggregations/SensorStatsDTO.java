@@ -1,6 +1,7 @@
 package com.trackysat.kafka.domain.aggregations;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class SensorStatsDTO {
@@ -11,6 +12,13 @@ public class SensorStatsDTO {
     String type; // typ
     String source; //src
     List<SensorValDTO> values;
+    Map<String, Long> valueCount;
+    String firstValue;
+    String lastValue;
+    Double max;
+    Double min;
+    Double avg;
+    Double sum;
 
     public String getSid() {
         return sid;
@@ -58,6 +66,62 @@ public class SensorStatsDTO {
 
     public void setValues(List<SensorValDTO> values) {
         this.values = values;
+    }
+
+    public Map<String, Long> getValueCount() {
+        return valueCount;
+    }
+
+    public void setValueCount(Map<String, Long> valueCount) {
+        this.valueCount = valueCount;
+    }
+
+    public String getFirstValue() {
+        return firstValue;
+    }
+
+    public void setFirstValue(String firstValue) {
+        this.firstValue = firstValue;
+    }
+
+    public String getLastValue() {
+        return lastValue;
+    }
+
+    public void setLastValue(String lastValue) {
+        this.lastValue = lastValue;
+    }
+
+    public Double getMax() {
+        return max;
+    }
+
+    public void setMax(Double max) {
+        this.max = max;
+    }
+
+    public Double getMin() {
+        return min;
+    }
+
+    public void setMin(Double min) {
+        this.min = min;
+    }
+
+    public Double getAvg() {
+        return avg;
+    }
+
+    public void setAvg(Double avg) {
+        this.avg = avg;
+    }
+
+    public Double getSum() {
+        return sum;
+    }
+
+    public void setSum(Double sum) {
+        this.sum = sum;
     }
 
     @Override

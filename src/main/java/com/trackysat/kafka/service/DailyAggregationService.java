@@ -5,6 +5,7 @@ import com.trackysat.kafka.domain.DailyAggregation;
 import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
+import com.trackysat.kafka.domain.aggregations.SensorValDTO;
 import com.trackysat.kafka.domain.vmson.VmsonCon;
 import com.trackysat.kafka.repository.DailyAggregationRepository;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
@@ -14,6 +15,7 @@ import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -87,21 +89,54 @@ public class DailyAggregationService {
                 Map<String, SensorStatsDTO> sensorIdDTOSensorValDTOMap = dailyAggregationMapper.conToSensorMap(vmsonCon);
                 Set<Map.Entry<String, SensorStatsDTO>> entrySet = sensorIdDTOSensorValDTOMap.entrySet();
                 for (Map.Entry<String, SensorStatsDTO> k : entrySet) {
-                    sensors.merge(
-                        k.getKey(),
-                        k.getValue(),
-                        (a, b) -> {
-                            a.setValues(
-                                Stream.concat(a.getValues().stream(), b.getValues().stream()).distinct().collect(Collectors.toList())
-                            );
-                            return a;
-                        }
-                    );
+                    sensors.merge(k.getKey(), k.getValue(), this::mergeSensorMaps);
                 }
             }
         }
         log.debug("Total sensors {}", sensors.size());
+        sensors.values().forEach(stat -> stat.setValues(new ArrayList<>())); // TODO Cassandra save fails when over sized
         return JSONUtils.toString(sensors);
+    }
+
+    private SensorStatsDTO mergeSensorMaps(SensorStatsDTO sensorStatsDTO, SensorStatsDTO sensorStatsDTO1) {
+        List<SensorValDTO> allValues = Stream
+            .concat(sensorStatsDTO.getValues().stream(), sensorStatsDTO1.getValues().stream())
+            .collect(Collectors.toList());
+        sensorStatsDTO.setValues(allValues);
+
+        allValues
+            .stream()
+            .min(Comparator.comparing(c -> c.getCreationDate().getEpochSecond()))
+            .map(SensorValDTO::getValue)
+            .ifPresent(sensorStatsDTO::setFirstValue);
+        allValues
+            .stream()
+            .max(Comparator.comparing(c -> c.getCreationDate().getEpochSecond()))
+            .map(SensorValDTO::getValue)
+            .ifPresent(sensorStatsDTO::setLastValue);
+
+        if (Objects.equals(sensorStatsDTO.getType(), "TELLTALE") || Objects.equals(sensorStatsDTO.getType(), "BOOLEAN")) {
+            sensorStatsDTO.setValueCount(
+                allValues.stream().map(SensorValDTO::getValue).collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+            );
+        } else {
+            try {
+                List<Double> doubleList = allValues
+                    .stream()
+                    .map(SensorValDTO::getValue)
+                    .map(Double::parseDouble)
+                    .collect(Collectors.toList());
+                doubleList.stream().max(Comparator.naturalOrder()).ifPresent(sensorStatsDTO::setMax);
+                doubleList.stream().min(Comparator.naturalOrder()).ifPresent(sensorStatsDTO::setMin);
+                sensorStatsDTO.setAvg(doubleList.stream().reduce(0.0, Double::sum) / doubleList.size());
+                sensorStatsDTO.setSum(doubleList.stream().reduce(0.0, Double::sum));
+                sensorStatsDTO.setValueCount(Collections.singletonMap("total", (long) doubleList.size()));
+            } catch (Exception e) {
+                log.error("Cannot parse double form values. {}", sensorStatsDTO);
+            }
+        }
+
+        return sensorStatsDTO;
     }
 
     public List<DailyAggregationDTO> getByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {

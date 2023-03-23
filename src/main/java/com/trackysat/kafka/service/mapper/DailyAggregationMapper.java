@@ -6,7 +6,6 @@ import com.trackysat.kafka.domain.DailyAggregation;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.domain.aggregations.SensorValDTO;
-import com.trackysat.kafka.domain.vmson.Sen;
 import com.trackysat.kafka.domain.vmson.VmsonCon;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
@@ -26,15 +25,15 @@ public class DailyAggregationMapper {
     public PositionDTO conToPosition(VmsonCon e) {
         PositionDTO p = new PositionDTO();
         p.setTimestamp(e.getEts().getTst());
-        p.setAltitude(e.getSat().getAlt());
+        p.setAltitude(Optional.ofNullable(e.getSat().getAlt()).orElse(-1));
+        p.setSpeed(Optional.ofNullable(e.getSat().getSpe()).orElse(-1));
+        p.setLatitude(Optional.ofNullable(e.getSat().getLat()).orElse(-1.0));
+        p.setLongitude(Optional.ofNullable(e.getSat().getLon()).orElse(-1.0));
         p.setDirection(e.getSat().getDir());
-        p.setLatitude(e.getSat().getLat());
-        p.setLongitude(e.getSat().getLon());
         p.setFix(e.getSat().getFix());
         p.setNumberOfSatellites(e.getSat().getSnr());
         p.setSignal(e.getSat().getSig());
         p.setTyp(e.getSat().getTyp());
-        p.setSpeed(e.getSat().getSpe());
         return p;
     }
 
@@ -44,7 +43,7 @@ public class DailyAggregationMapper {
             .stream()
             .collect(
                 Collectors.toMap(
-                    Sen::getIid,
+                    sen -> String.format("%s_%s_%s_%s_%s", sen.getSrc(), sen.getIid(), sen.getMis(), sen.getTyp(), sen.getSid()),
                     sen -> {
                         SensorStatsDTO id = new SensorStatsDTO();
                         id.setName(sen.getIid());
@@ -55,7 +54,7 @@ public class DailyAggregationMapper {
 
                         SensorValDTO val = new SensorValDTO();
                         val.setCreationDate(e.getEts().getTst());
-                        val.setValue(Integer.parseInt(sen.getVal()));
+                        val.setValue(sen.getVal());
                         id.setValues(Collections.singletonList(val));
                         return id;
                     }

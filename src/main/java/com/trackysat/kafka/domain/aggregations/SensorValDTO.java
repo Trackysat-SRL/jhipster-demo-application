@@ -7,14 +7,14 @@ import java.util.Objects;
 
 public class SensorValDTO {
 
-    Integer value;
+    String value;
     Instant creationDate;
 
-    public Integer getValue() {
+    public String getValue() {
         return value;
     }
 
-    public void setValue(Integer value) {
+    public void setValue(String value) {
         this.value = value;
     }
 

@@ -2,16 +2,15 @@ package com.trackysat.kafka.web.rest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
-import com.trackysat.kafka.domain.aggregations.SensorValDTO;
 import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.TrackyEventQueryService;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -103,8 +102,7 @@ public class TrackyEventQueryResource {
     }
 
     @GetMapping("/distance/{id}")
-    public ResponseEntity<Map<String, Integer>> getTotalDistance(
-        @org.springdoc.api.annotations.ParameterObject Pageable pageable,
+    public ResponseEntity<Map<String, Double>> getTotalDistance(
         @PathVariable String id,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
@@ -114,10 +112,52 @@ public class TrackyEventQueryResource {
         Instant toDate = Instant.parse(to);
         try {
             Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(id, fromDate, toDate);
-            SensorStatsDTO stats = sensors.get("TotalVehicleDistance");
-            Integer min = stats.getValues().stream().map(SensorValDTO::getValue).min(Comparator.naturalOrder()).orElse(0);
-            Integer max = stats.getValues().stream().map(SensorValDTO::getValue).max(Comparator.naturalOrder()).orElse(0);
-            return ResponseEntity.ok().body(Collections.singletonMap("distance", max - min));
+            Map<String, Double> distance = sensors
+                .entrySet()
+                .stream()
+                .filter(e -> e.getKey().contains("TotalVehicleDistance"))
+                .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().getMax() - v.getValue().getMin()));
+            return ResponseEntity.ok().body(distance);
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.unprocessableEntity().body(null);
+        }
+    }
+
+    @GetMapping("/data/{id}/sensors")
+    public ResponseEntity<List<SensorStatsDTO>> getSensorList(
+        @PathVariable String id,
+        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
+    ) {
+        log.debug("REST request to getSensorList by deviceId: {}, {}, {}", id, from, to);
+        Instant fromDate = Instant.parse(from);
+        Instant toDate = Instant.parse(to);
+        try {
+            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(id, fromDate, toDate);
+            return ResponseEntity.ok().body(new ArrayList<>(sensors.values()));
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.unprocessableEntity().body(null);
+        }
+    }
+
+    @GetMapping("/data/{id}/sensors/{sensor}")
+    public ResponseEntity<Map<String, SensorStatsDTO>> getFilteredSensor(
+        @PathVariable String id,
+        @PathVariable String sensor,
+        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
+    ) {
+        log.debug("REST request to getFilteredSensor by deviceId: {}, {}, {}, {}", id, from, to, sensor);
+        Instant fromDate = Instant.parse(from);
+        Instant toDate = Instant.parse(to);
+        try {
+            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(id, fromDate, toDate);
+            Map<String, SensorStatsDTO> stats = sensors
+                .entrySet()
+                .stream()
+                .filter(e -> e.getKey().toLowerCase().contains(sensor))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            return ResponseEntity.ok().body(stats);
         } catch (JsonProcessingException e) {
             return ResponseEntity.unprocessableEntity().body(null);
         }

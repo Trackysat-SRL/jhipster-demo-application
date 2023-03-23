@@ -24,24 +24,28 @@ public class AggregationDelegatorService {
 
     private final Logger log = LoggerFactory.getLogger(DailyAggregationService.class);
 
-    private final TrackyEventQueryService trackyEventQueryService;
-
     private final DailyAggregationMapper dailyAggregationMapper;
+
+    private final TrackyEventQueryService trackyEventQueryService;
 
     private final DailyAggregationService dailyAggregationService;
 
     private final MonthlyAggregationService monthlyAggregationService;
 
+    private final JobStatusService jobStatusService;
+
     public AggregationDelegatorService(
         TrackyEventQueryService trackyEventQueryService,
         DailyAggregationMapper dailyAggregationMapper,
         DailyAggregationService dailyAggregationService,
-        MonthlyAggregationService monthlyAggregationService
+        MonthlyAggregationService monthlyAggregationService,
+        JobStatusService jobStatusService
     ) {
         this.trackyEventQueryService = trackyEventQueryService;
         this.dailyAggregationMapper = dailyAggregationMapper;
         this.dailyAggregationService = dailyAggregationService;
         this.monthlyAggregationService = monthlyAggregationService;
+        this.jobStatusService = jobStatusService;
     }
 
     public List<PositionDTO> getPositionsByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo)
@@ -121,5 +125,57 @@ public class AggregationDelegatorService {
 
     public Optional<DailyAggregationDTO> getOne() {
         return dailyAggregationService.getOne().map(dailyAggregationMapper::toDTO);
+    }
+
+    // == PROCESS ==
+
+    public void dailyProcess(String deviceId) {
+        Instant startDate = Instant.now();
+        log.info("[{}] Started at " + startDate.toString(), deviceId);
+        Optional<Instant> lastDay = jobStatusService.getLastDayProcessed(deviceId);
+        if (lastDay.isEmpty()) {
+            log.debug("[{}] Last day was not present, set to yesterday", deviceId);
+        } else {
+            log.debug("[{}] Last day processed: " + lastDay, deviceId);
+        }
+        List<LocalDate> days = DateUtils.getDaysBetween(lastDay.orElse(DateUtils.twoDaysAgo()), startDate);
+        log.debug("[{}] Days to process: " + days.size(), deviceId);
+        for (LocalDate d : days) {
+            try {
+                log.debug("[{}] Started processing day " + d.toString(), deviceId);
+                trackyEventQueryService.processDay(deviceId, d);
+                log.debug("[{}] Finished processing day " + d, deviceId);
+                jobStatusService.setLastDayProcessed(deviceId, d, null);
+            } catch (Exception e) {
+                log.error("[{}] [{}] Error processing day. ERROR: {}", deviceId, d, e.getMessage());
+            }
+        }
+        Instant endDate = Instant.now();
+        log.info("[{}] Finished at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
+    }
+
+    public void monthlyProcess(String deviceId) {
+        Instant startDate = Instant.now();
+        log.info("[{}] Started at " + startDate.toString(), deviceId);
+        Optional<Instant> lastDay = jobStatusService.getLastMonthProcessed(deviceId);
+        if (lastDay.isEmpty()) {
+            log.debug("[{}] Last month was not present, set to last month", deviceId);
+        } else {
+            log.debug("[{}] Last month processed: " + lastDay, deviceId);
+        }
+        List<LocalDate> months = DateUtils.getMonthsBetween(lastDay.orElse(DateUtils.twoMonthAgo()), startDate);
+        log.debug("[{}] Months to process: " + months.size(), deviceId);
+        for (LocalDate d : months) {
+            try {
+                log.debug("[{}] Started processing month " + d.getMonth().toString(), deviceId);
+                trackyEventQueryService.processMonth(deviceId, d);
+                log.debug("[{}] Finished processing month " + d.getMonth().toString(), deviceId);
+                jobStatusService.setLastMonthProcessed(deviceId, d, null);
+            } catch (Exception e) {
+                log.error("[{}] [{}] Error processing month. ERROR: {}", deviceId, d.getMonth(), e.getMessage());
+            }
+        }
+        Instant endDate = Instant.now();
+        log.info("[{}] Finished at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
     }
 }
