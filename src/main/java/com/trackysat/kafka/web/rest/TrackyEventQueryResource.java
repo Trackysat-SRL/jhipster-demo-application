@@ -1,18 +1,9 @@
 package com.trackysat.kafka.web.rest;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
-import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.TrackyEventQueryService;
-import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,14 +29,8 @@ public class TrackyEventQueryResource {
 
     private final TrackyEventQueryService trackyEventQueryService;
 
-    private final AggregationDelegatorService aggregationDelegatorService;
-
-    public TrackyEventQueryResource(
-        TrackyEventQueryService trackyEventQueryService,
-        AggregationDelegatorService aggregationDelegatorService
-    ) {
+    public TrackyEventQueryResource(TrackyEventQueryService trackyEventQueryService) {
         this.trackyEventQueryService = trackyEventQueryService;
-        this.aggregationDelegatorService = aggregationDelegatorService;
     }
 
     @GetMapping("/events")
@@ -72,83 +57,5 @@ public class TrackyEventQueryResource {
 
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok().headers(headers).body(page.getContent());
-    }
-
-    @GetMapping("/data")
-    public ResponseEntity<DailyAggregationDTO> getOneAggregation() {
-        log.debug("REST request to get one DailyAggregationDTO random");
-        return ResponseUtil.wrapOrNotFound(aggregationDelegatorService.getOne());
-    }
-
-    @GetMapping("/data/{id}")
-    public ResponseEntity<List<DailyAggregationDTO>> getListAggregation(
-        @org.springdoc.api.annotations.ParameterObject Pageable pageable,
-        @PathVariable String id,
-        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
-        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
-    ) {
-        log.debug("REST request to get a page of DailyAggregationDTO by deviceId: {}, {}, {}", id, from, to);
-        Instant fromDate = Instant.parse(from);
-        Instant toDate = Instant.parse(to);
-        try {
-            List<DailyAggregationDTO> trackyEvents = aggregationDelegatorService.getByDeviceIdAndDateRange(id, fromDate, toDate);
-            final int start = (int) pageable.getOffset();
-            final int end = Math.min((start + pageable.getPageSize()), trackyEvents.size());
-            final Page<DailyAggregationDTO> page = new PageImpl<>(trackyEvents.subList(start, end), pageable, trackyEvents.size());
-
-            HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-            return ResponseEntity.ok().headers(headers).body(page.getContent());
-        } catch (JsonProcessingException e) {
-            return ResponseEntity.unprocessableEntity().body(null);
-        }
-    }
-
-    @GetMapping("/data/{id}/sensors")
-    public ResponseEntity<List<SensorStatsDTO>> getSensorList(
-        @PathVariable String id,
-        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
-        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
-        @RequestParam(value = "values", required = false, defaultValue = "false") Boolean includeValues
-    ) {
-        log.debug("REST request to getSensorList by deviceId: {}, {}, {}, {}", id, from, to, includeValues);
-        Instant fromDate = Instant.parse(from);
-        Instant toDate = Instant.parse(to);
-        try {
-            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(id, fromDate, toDate);
-            if (!includeValues) {
-                sensors.values().forEach(s -> s.setValues(null));
-            }
-            return ResponseEntity.ok().body(new ArrayList<>(sensors.values()));
-        } catch (JsonProcessingException e) {
-            return ResponseEntity.unprocessableEntity().body(null);
-        }
-    }
-
-    @GetMapping("/data/{id}/sensors/{sensor}")
-    public ResponseEntity<List<SensorStatsDTO>> getFilteredSensor(
-        @PathVariable String id,
-        @PathVariable String sensor,
-        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
-        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
-        @RequestParam(value = "values", required = false, defaultValue = "false") Boolean includeValues
-    ) {
-        log.debug("REST request to getFilteredSensor by deviceId: {}, {}, {}, {}, {}", id, from, to, sensor, includeValues);
-        Instant fromDate = Instant.parse(from);
-        Instant toDate = Instant.parse(to);
-        try {
-            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(id, fromDate, toDate);
-            List<SensorStatsDTO> stats = sensors
-                .entrySet()
-                .stream()
-                .filter(e -> e.getKey().toLowerCase().contains(sensor.toLowerCase()))
-                .map(Map.Entry::getValue)
-                .collect(Collectors.toList());
-            if (!includeValues) {
-                stats.forEach(s -> s.setValues(null));
-            }
-            return ResponseEntity.ok().body(stats);
-        } catch (JsonProcessingException e) {
-            return ResponseEntity.unprocessableEntity().body(null);
-        }
     }
 }
