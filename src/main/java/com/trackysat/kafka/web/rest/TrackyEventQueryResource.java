@@ -8,9 +8,11 @@ import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -127,13 +129,17 @@ public class TrackyEventQueryResource {
     public ResponseEntity<List<SensorStatsDTO>> getSensorList(
         @PathVariable String id,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
-        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
+        @RequestParam(value = "values", required = false, defaultValue = "false") Boolean includeValues
     ) {
-        log.debug("REST request to getSensorList by deviceId: {}, {}, {}", id, from, to);
+        log.debug("REST request to getSensorList by deviceId: {}, {}, {}, {}", id, from, to, includeValues);
         Instant fromDate = Instant.parse(from);
         Instant toDate = Instant.parse(to);
         try {
             Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(id, fromDate, toDate);
+            if (!includeValues) {
+                sensors.values().forEach(s -> s.setValues(null));
+            }
             return ResponseEntity.ok().body(new ArrayList<>(sensors.values()));
         } catch (JsonProcessingException e) {
             return ResponseEntity.unprocessableEntity().body(null);
@@ -145,9 +151,10 @@ public class TrackyEventQueryResource {
         @PathVariable String id,
         @PathVariable String sensor,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
-        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
+        @RequestParam(value = "values", required = false, defaultValue = "false") Boolean includeValues
     ) {
-        log.debug("REST request to getFilteredSensor by deviceId: {}, {}, {}, {}", id, from, to, sensor);
+        log.debug("REST request to getFilteredSensor by deviceId: {}, {}, {}, {}, {}", id, from, to, sensor, includeValues);
         Instant fromDate = Instant.parse(from);
         Instant toDate = Instant.parse(to);
         try {
@@ -157,6 +164,9 @@ public class TrackyEventQueryResource {
                 .stream()
                 .filter(e -> e.getKey().toLowerCase().contains(sensor.toLowerCase()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            if (!includeValues) {
+                stats.values().forEach(s -> s.setValues(null));
+            }
             return ResponseEntity.ok().body(stats);
         } catch (JsonProcessingException e) {
             return ResponseEntity.unprocessableEntity().body(null);

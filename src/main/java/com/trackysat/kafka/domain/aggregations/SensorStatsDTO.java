@@ -1,9 +1,11 @@
 package com.trackysat.kafka.domain.aggregations;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class SensorStatsDTO {
 
     String sid;
