@@ -12,9 +12,9 @@ public class SensorStatsDTO {
     String type; // typ
     String source; //src
     List<SensorValDTO> values;
-    Map<String, Long> valueCount;
-    String firstValue;
-    String lastValue;
+    Map<String, Long> count;
+    SensorValDTO firstValue;
+    SensorValDTO lastValue;
     Double max;
     Double min;
     Double avg;
@@ -68,27 +68,27 @@ public class SensorStatsDTO {
         this.values = values;
     }
 
-    public Map<String, Long> getValueCount() {
-        return valueCount;
+    public Map<String, Long> getCount() {
+        return count;
     }
 
-    public void setValueCount(Map<String, Long> valueCount) {
-        this.valueCount = valueCount;
+    public void setCount(Map<String, Long> count) {
+        this.count = count;
     }
 
-    public String getFirstValue() {
+    public SensorValDTO getFirstValue() {
         return firstValue;
     }
 
-    public void setFirstValue(String firstValue) {
+    public void setFirstValue(SensorValDTO firstValue) {
         this.firstValue = firstValue;
     }
 
-    public String getLastValue() {
+    public SensorValDTO getLastValue() {
         return lastValue;
     }
 
-    public void setLastValue(String lastValue) {
+    public void setLastValue(SensorValDTO lastValue) {
         this.lastValue = lastValue;
     }
 

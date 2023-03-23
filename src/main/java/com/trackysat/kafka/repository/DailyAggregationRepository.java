@@ -102,6 +102,7 @@ public class DailyAggregationRepository {
         te.setDeviceId(row.getString("device_id"));
         te.setAggregatedDate(row.getInstant("aggregated_date"));
         te.setPositions(row.getString("positions"));
+        te.setSensors(row.getString("sensors"));
         return te;
     }
 }

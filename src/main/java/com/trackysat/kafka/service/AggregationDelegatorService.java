@@ -64,16 +64,7 @@ public class AggregationDelegatorService {
             .map(DailyAggregationDTO::getSensors)
             .map(Map::entrySet)
             .flatMap(Set::stream)
-            .collect(
-                Collectors.toMap(
-                    Map.Entry::getKey,
-                    Map.Entry::getValue,
-                    (a, b) -> {
-                        a.setValues(Stream.concat(a.getValues().stream(), b.getValues().stream()).distinct().collect(Collectors.toList()));
-                        return a;
-                    }
-                )
-            );
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, dailyAggregationService::mergeSensorMaps));
     }
 
     public List<DailyAggregationDTO> getByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo)

@@ -94,29 +94,30 @@ public class DailyAggregationService {
             }
         }
         log.debug("Total sensors {}", sensors.size());
-        sensors.values().forEach(stat -> stat.setValues(new ArrayList<>())); // TODO Cassandra save fails when over sized
+
+        // TODO Cassandra save fails when over sized
+        sensors
+            .values()
+            .forEach(stat -> {
+                if (stat.getValues().size() > 500) {
+                    stat.setValues(new ArrayList<>());
+                }
+            });
+
         return JSONUtils.toString(sensors);
     }
 
-    private SensorStatsDTO mergeSensorMaps(SensorStatsDTO sensorStatsDTO, SensorStatsDTO sensorStatsDTO1) {
+    public SensorStatsDTO mergeSensorMaps(SensorStatsDTO sensorStatsDTO, SensorStatsDTO sensorStatsDTO1) {
         List<SensorValDTO> allValues = Stream
             .concat(sensorStatsDTO.getValues().stream(), sensorStatsDTO1.getValues().stream())
             .collect(Collectors.toList());
         sensorStatsDTO.setValues(allValues);
 
-        allValues
-            .stream()
-            .min(Comparator.comparing(c -> c.getCreationDate().getEpochSecond()))
-            .map(SensorValDTO::getValue)
-            .ifPresent(sensorStatsDTO::setFirstValue);
-        allValues
-            .stream()
-            .max(Comparator.comparing(c -> c.getCreationDate().getEpochSecond()))
-            .map(SensorValDTO::getValue)
-            .ifPresent(sensorStatsDTO::setLastValue);
+        allValues.stream().min(Comparator.comparing(c -> c.getCreationDate().getEpochSecond())).ifPresent(sensorStatsDTO::setFirstValue);
+        allValues.stream().max(Comparator.comparing(c -> c.getCreationDate().getEpochSecond())).ifPresent(sensorStatsDTO::setLastValue);
 
         if (Objects.equals(sensorStatsDTO.getType(), "TELLTALE") || Objects.equals(sensorStatsDTO.getType(), "BOOLEAN")) {
-            sensorStatsDTO.setValueCount(
+            sensorStatsDTO.setCount(
                 allValues.stream().map(SensorValDTO::getValue).collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
             );
         } else {
@@ -130,7 +131,7 @@ public class DailyAggregationService {
                 doubleList.stream().min(Comparator.naturalOrder()).ifPresent(sensorStatsDTO::setMin);
                 sensorStatsDTO.setAvg(doubleList.stream().reduce(0.0, Double::sum) / doubleList.size());
                 sensorStatsDTO.setSum(doubleList.stream().reduce(0.0, Double::sum));
-                sensorStatsDTO.setValueCount(Collections.singletonMap("total", (long) doubleList.size()));
+                sensorStatsDTO.setCount(Collections.singletonMap("total", (long) doubleList.size()));
             } catch (Exception e) {
                 log.error("Cannot parse double form values. {}", sensorStatsDTO);
             }
