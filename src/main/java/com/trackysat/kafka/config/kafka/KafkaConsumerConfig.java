@@ -18,6 +18,7 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @EnableKafka
 @Configuration
@@ -83,16 +84,16 @@ public class KafkaConsumerConfig {
     private Long CONSUMER_BACKOFF_INTERVAL;
 
     @Value(value = "${kafka.consumer.threadPool.corePoolSize}")
-    private String CONSUMER_THREADPOOL_COREPOOLSIZE;
+    private Integer CONSUMER_THREADPOOL_COREPOOLSIZE;
 
     @Value(value = "${kafka.consumer.threadPool.maxPoolSize}")
-    private String CONSUMER_THREADPOOL_MAXPOOLSIZE;
+    private Integer CONSUMER_THREADPOOL_MAXPOOLSIZE;
 
     @Value(value = "${kafka.consumer.threadPool.queueCapacity}")
-    private String CONSUMER_THREADPOOL_QUEUECAPACITY;
+    private Integer CONSUMER_THREADPOOL_QUEUECAPACITY;
 
     @Value(value = "${kafka.consumer.threadPool.awaitTerminationSeconds}")
-    private String CONSUMER_THREADPOOL_AWAITTERMINATIONSECONDS;
+    private Integer CONSUMER_THREADPOOL_AWAITTERMINATIONSECONDS;
 
     @Autowired
     Environment env;
@@ -104,6 +105,19 @@ public class KafkaConsumerConfig {
 
     @Autowired
     private DeadLetterQueueRepository deadLetterQueueRepository;
+
+    @Bean
+    ThreadPoolTaskExecutor consumerProcessorExecutor() {
+        log.info("Creating a consumerProcessorExecutor pool with {} threads", CONSUMER_THREADPOOL_COREPOOLSIZE);
+        ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
+        exec.setCorePoolSize(CONSUMER_THREADPOOL_COREPOOLSIZE);
+        exec.setMaxPoolSize(CONSUMER_THREADPOOL_MAXPOOLSIZE);
+        exec.setQueueCapacity(CONSUMER_THREADPOOL_QUEUECAPACITY);
+        exec.setAwaitTerminationSeconds(CONSUMER_THREADPOOL_AWAITTERMINATIONSECONDS);
+        exec.setAllowCoreThreadTimeOut(true);
+        exec.setThreadNamePrefix("consumer-");
+        return exec;
+    }
 
     @Bean
     public ConsumerFactory<String, String> consumerFactory() {
@@ -128,10 +142,6 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         //        props.put(ConsumerConfig.TOPIC_ENRICHMENT, TOPIC_ENRICHMENT);
         //        props.put(ConsumerConfig.GROUP_ID_CONFIG, CONSUMER_GROUP_ID);
-        //        props.put(ConsumerConfig.THREADPOOL_COREPOOLSIZE_CONFIG, CONSUMER_THREADPOOL_COREPOOLSIZE);
-        //        props.put(ConsumerConfig.THREADPOOL_MAXPOOLSIZE_CONFIG, CONSUMER_THREADPOOL_MAXPOOLSIZE);
-        //        props.put(ConsumerConfig.THREADPOOL_QUEUECAPACITY_CONFIG, CONSUMER_THREADPOOL_QUEUECAPACITY);
-        //        props.put(ConsumerConfig.THREADPOOL_AWAITTERMINATIONSECONDS_CONFIG, CONSUMER_THREADPOOL_AWAITTERMINATIONSECONDS);
         return new DefaultKafkaConsumerFactory<String, String>(props);
     }
 
@@ -144,6 +154,8 @@ public class KafkaConsumerConfig {
         factory.setBatchListener(false);
 
         factory.setRecordFilterStrategy(new CustomRecordFilterStrategy());
+
+        factory.getContainerProperties().setConsumerTaskExecutor(consumerProcessorExecutor());
         return factory;
     }
 

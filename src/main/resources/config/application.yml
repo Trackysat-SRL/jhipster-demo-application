@@ -140,9 +140,9 @@ spring:
     execution:
       thread-name-prefix: fleettrack-task-
       pool:
-        core-size: 2
-        max-size: 10
-        queue-capacity: 200
+        core-size: 20
+        max-size: 100
+        queue-capacity: 2000000
       shutdown:
         await-termination-period: 6s
     scheduling:
@@ -243,7 +243,7 @@ kafka:
   consumer.backoff.max.attempts: 0
   consumer.backoff.interval: 200
 
-  consumer.threadPool.corePoolSize: 2
+  consumer.threadPool.corePoolSize: 4
   consumer.threadPool.maxPoolSize: 10
   consumer.threadPool.queueCapacity: 200
   consumer.threadPool.awaitTerminationSeconds: 6
