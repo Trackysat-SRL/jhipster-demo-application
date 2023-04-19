@@ -18,10 +18,15 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.common.Metric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -69,8 +74,29 @@ public class CassandraConsumerService {
         containerFactory = "kafkaTrackysatListenerContainerFactory",
         concurrency = CONSUMER_NUMBER
     )
-    public void listenGroupTrackysat(String message) throws InterruptedException {
-        log.debug("Received VMSON in group " + TRACKYSAT_GROUP + " msg: " + message);
+    public void listenGroupTrackysat(
+        String message,
+        @Header(KafkaHeaders.RECEIVED_PARTITION_ID) Integer partition,
+        @Header(KafkaHeaders.OFFSET) Long offset,
+        Consumer<String, String> consumer
+    ) throws InterruptedException {
+        String lag = consumer
+            .metrics()
+            .values()
+            .stream()
+            .filter(m -> "records-lag-max".equals(m.metricName().name()))
+            .map(Metric::metricValue)
+            .map(Object::toString)
+            .distinct()
+            .collect(Collectors.joining(""));
+        log.debug(
+            "Received VMSON in group {} | partition: {} | lag: {} | offset: {} | msg: {}",
+            TRACKYSAT_GROUP,
+            partition,
+            lag,
+            offset,
+            message
+        );
         if (message == null) return;
         try {
             processEvent(message);
