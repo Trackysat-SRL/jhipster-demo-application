@@ -2,10 +2,13 @@ package com.trackysat.kafka.config.kafka;
 
 import com.trackysat.kafka.repository.DeadLetterQueueRepository;
 import java.util.*;
+import javax.annotation.PreDestroy;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +22,8 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 @EnableKafka
 @Configuration
 public class KafkaConsumerConfig {
+
+    private final Logger log = LoggerFactory.getLogger(KafkaConsumerConfig.class);
 
     @Value(value = "${kafka.consumer.enabled}")
     private String CONSUMER_ENABLED;
@@ -140,5 +145,10 @@ public class KafkaConsumerConfig {
 
         factory.setRecordFilterStrategy(new CustomRecordFilterStrategy());
         return factory;
+    }
+
+    @PreDestroy
+    public void destroy() {
+        log.info("Shutdown consumer id: {}, group: {}", CONSUMER_CLIENT_ID, CONSUMER_GROUP_ID);
     }
 }

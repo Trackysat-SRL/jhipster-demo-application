@@ -115,7 +115,7 @@ management:
 
 spring:
   application:
-    name: demoKafkaJHipster
+    name: FleetTrack
   profiles:
     # The commented value for `active` can be replaced with valid Spring profiles to load.
     # Otherwise, it will be filled in by maven when building the JAR file
@@ -138,13 +138,15 @@ spring:
       matching-strategy: ant_path_matcher
   task:
     execution:
-      thread-name-prefix: demo-kafka-j-hipster-task-
+      thread-name-prefix: fleettrack-task-
       pool:
         core-size: 2
-        max-size: 50
-        queue-capacity: 10000
+        max-size: 10
+        queue-capacity: 200
+      shutdown:
+        await-termination-period: 6s
     scheduling:
-      thread-name-prefix: demo-kafka-j-hipster-scheduling-
+      thread-name-prefix: fleettrack-scheduling-
       pool:
         size: 2
   thymeleaf:
@@ -241,7 +243,7 @@ kafka:
   consumer.backoff.max.attempts: 0
   consumer.backoff.interval: 200
 
-  consumer.threadPool.corePoolSize: 10
+  consumer.threadPool.corePoolSize: 2
   consumer.threadPool.maxPoolSize: 10
   consumer.threadPool.queueCapacity: 200
   consumer.threadPool.awaitTerminationSeconds: 6

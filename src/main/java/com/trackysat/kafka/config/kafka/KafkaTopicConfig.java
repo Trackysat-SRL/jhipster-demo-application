@@ -24,6 +24,7 @@ public class KafkaTopicConfig {
 
     @Bean
     public KafkaAdmin kafkaAdmin() {
+        if (!enabled) return null;
         Map<String, Object> configs = new HashMap<>();
         configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
         return new KafkaAdmin(configs);
