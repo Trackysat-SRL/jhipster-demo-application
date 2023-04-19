@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,6 +54,7 @@ public class CassandraConsumerService {
     private final AtomicBoolean isEnabled = new AtomicBoolean(true);
     private final AtomicInteger eventCounter = new AtomicInteger(0);
     private final AtomicInteger errorCounter = new AtomicInteger(0);
+    private Map<Integer, String> partitionsLag = new HashMap<Integer, String>();
     private Instant startDate = Instant.now();
 
     public CassandraConsumerService(
@@ -97,6 +100,7 @@ public class CassandraConsumerService {
             offset,
             message
         );
+        partitionsLag.put(partition, lag);
         if (message == null) return;
         try {
             processEvent(message);
@@ -159,6 +163,7 @@ public class CassandraConsumerService {
         status.setEnabled(isEnabled.get());
         status.setEventCounter(eventCounter.get());
         status.setErrorCounter(errorCounter.get());
+        status.setLag(partitionsLag);
         return Optional.of(status);
     }
 

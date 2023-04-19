@@ -1,6 +1,6 @@
 package com.trackysat.kafka.service.dto;
 
-import java.time.Instant;
+import java.util.Map;
 
 public class StatusDTO {
 
@@ -8,6 +8,7 @@ public class StatusDTO {
     boolean isEnabled;
     int eventCounter;
     int errorCounter;
+    private Map<Integer, String> lag;
 
     public long getRunningTime() {
         return runningTime;
@@ -39,5 +40,13 @@ public class StatusDTO {
 
     public void setErrorCounter(int errorCounter) {
         this.errorCounter = errorCounter;
+    }
+
+    public Map<Integer, String> getLag() {
+        return lag;
+    }
+
+    public void setLag(Map<Integer, String> lag) {
+        this.lag = lag;
     }
 }
