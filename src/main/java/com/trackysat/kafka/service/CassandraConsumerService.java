@@ -106,13 +106,14 @@ public class CassandraConsumerService {
         }
     }
 
-    private void processEvent(String message) throws JsonProcessingException {
+    public void processEvent(String message) throws JsonProcessingException {
         eventCounter.incrementAndGet();
         if (isEnabled.get()) {
             Vmson record = JSONUtils.toJson(message, Vmson.class);
             TrackyEvent event = trackysatEventMapper.fromVmson(record);
             trackyEventRepository.save(event);
             deviceRepository.save(deviceMapper.fromVmson(record));
+            log.debug("TrackyEvent saved. device: {} date: {}", event.getDeviceId(), event.getCreatedDate());
         }
     }
 
