@@ -141,6 +141,7 @@ public class DailyAggregationService {
     }
 
     public List<DailyAggregationDTO> getByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
+        log.debug("Getting DailyAggregations by device {} and range {} - {}", deviceId, dateFrom, dateTo);
         return dailyAggregationRepository
             .findOneByDeviceIdAndDateRange(deviceId, dateFrom, dateTo)
             .stream()

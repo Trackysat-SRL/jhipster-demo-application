@@ -1,12 +1,9 @@
 package com.trackysat.kafka.utils;
 
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class DateUtils {
@@ -30,10 +27,17 @@ public class DateUtils {
     }
 
     public static List<LocalDate> getMonthsBetween(Instant startDate, Instant endDate) {
-        return LocalDate
+        Map<Month, LocalDate> months = new HashMap<>();
+        LocalDate now = LocalDate.now();
+        LocalDate
             .ofInstant(startDate.plus(1, ChronoUnit.DAYS), ZoneId.systemDefault())
             .datesUntil(LocalDate.ofInstant(endDate, ZoneId.systemDefault()))
-            .collect(Collectors.toList());
+            .forEach(d -> {
+                if (d.getMonth() != now.getMonth()) {
+                    months.put(d.getMonth(), d);
+                }
+            });
+        return new ArrayList<>(months.values());
     }
 
     public static Instant twoDaysAgo() {
@@ -42,8 +46,9 @@ public class DateUtils {
     }
 
     public static Instant twoMonthAgo() {
-        Instant now = Instant.now();
-        return now.minus(2, ChronoUnit.MONTHS);
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.MONTH, -2);
+        return cal.getTime().toInstant();
     }
 
     public static Instant atStartOfDate(Instant dateFrom) {

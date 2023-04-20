@@ -3,6 +3,7 @@ package com.trackysat.kafka.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.repository.TrackyEventRepository;
+import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import java.time.Instant;
@@ -67,7 +68,15 @@ public class TrackyEventQueryService {
         log.info("[{}] [{}] Finished processing day", deviceId, day);
     }
 
-    public void processMonth(String deviceId, LocalDate day) {
-        log.info("[{}] Processing month " + day.toString(), deviceId);
+    public void processMonth(String deviceId, LocalDate month) throws JsonProcessingException {
+        Instant startOfFirstDay = month.withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant endOfLastDay = month
+            .withDayOfMonth(month.getMonth().length(month.isLeapYear()))
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC)
+            .plus(1, ChronoUnit.DAYS);
+        List<DailyAggregationDTO> events = dailyAggregationService.getByDeviceIdAndDateRange(deviceId, startOfFirstDay, endOfLastDay);
+        log.info("[{}] [{}] Events found: " + events.size(), deviceId, month.getMonth());
+        monthlyAggregationService.process(deviceId, startOfFirstDay, events);
     }
 }
