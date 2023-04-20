@@ -92,14 +92,7 @@ public class CassandraConsumerService {
             .map(Object::toString)
             .distinct()
             .collect(Collectors.joining(""));
-        log.debug(
-            "Received VMSON in group {} | partition: {} | lag: {} | offset: {} | msg: {}",
-            TRACKYSAT_GROUP,
-            partition,
-            lag,
-            offset,
-            message
-        );
+        log.debug("Received VMSON in group {} | partition: {} | lag: {} | offset: {}", TRACKYSAT_GROUP, partition, lag, offset);
         partitionsLag.put(partition, lag);
         if (message == null) return;
         try {
@@ -125,7 +118,6 @@ public class CassandraConsumerService {
     }
 
     private void processError(String msg, String errorMessage) {
-        log.debug("processError input: {}", msg);
         errorCounter.incrementAndGet();
         if (isEnabled.get()) {
             String hash = null;
