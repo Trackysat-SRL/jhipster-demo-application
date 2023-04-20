@@ -107,7 +107,6 @@ public class CassandraConsumerService {
     }
 
     private void processEvent(String message) throws JsonProcessingException {
-        log.debug("processEvent input: {}", message);
         eventCounter.incrementAndGet();
         if (isEnabled.get()) {
             Vmson record = JSONUtils.toJson(message, Vmson.class);
