@@ -12,6 +12,7 @@ import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.service.mapper.DailyAggregationMapper;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
+import com.trackysat.kafka.utils.DateUtils;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.time.Instant;
 import java.util.*;
@@ -129,6 +130,9 @@ public class DailyAggregationService {
                     .collect(Collectors.toList());
                 doubleList.stream().max(Comparator.naturalOrder()).ifPresent(sensorStatsDTO::setMax);
                 doubleList.stream().min(Comparator.naturalOrder()).ifPresent(sensorStatsDTO::setMin);
+                sensorStatsDTO.setDiff(
+                    Optional.ofNullable(sensorStatsDTO.getMax()).orElse(0.0) - Optional.ofNullable(sensorStatsDTO.getMin()).orElse(0.0)
+                );
                 sensorStatsDTO.setAvg(doubleList.stream().reduce(0.0, Double::sum) / doubleList.size());
                 sensorStatsDTO.setSum(doubleList.stream().reduce(0.0, Double::sum));
                 sensorStatsDTO.setCount(Collections.singletonMap("total", (long) doubleList.size()));
@@ -143,7 +147,7 @@ public class DailyAggregationService {
     public List<DailyAggregationDTO> getByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
         log.debug("Getting DailyAggregations by device {} and range {} - {}", deviceId, dateFrom, dateTo);
         return dailyAggregationRepository
-            .findOneByDeviceIdAndDateRange(deviceId, dateFrom, dateTo)
+            .findOneByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), DateUtils.atEndOfDate(dateTo))
             .stream()
             .map(dailyAggregationMapper::toDTO)
             .collect(Collectors.toList());

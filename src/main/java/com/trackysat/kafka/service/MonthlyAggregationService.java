@@ -112,6 +112,9 @@ public class MonthlyAggregationService {
                     .collect(Collectors.toList());
                 doubleList.stream().max(Comparator.naturalOrder()).ifPresent(sensorStatsDTO::setMax);
                 doubleList.stream().min(Comparator.naturalOrder()).ifPresent(sensorStatsDTO::setMin);
+                sensorStatsDTO.setDiff(
+                    Optional.ofNullable(sensorStatsDTO.getMax()).orElse(0.0) - Optional.ofNullable(sensorStatsDTO.getMin()).orElse(0.0)
+                );
                 sensorStatsDTO.setAvg(doubleList.stream().reduce(0.0, Double::sum) / doubleList.size());
                 sensorStatsDTO.setSum(doubleList.stream().reduce(0.0, Double::sum));
                 sensorStatsDTO.setCount(Collections.singletonMap("total", (long) doubleList.size()));

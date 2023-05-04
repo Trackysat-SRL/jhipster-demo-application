@@ -1,12 +1,16 @@
 package com.trackysat.kafka.domain.aggregations;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SensorStatsDTO {
+
+    private final Logger log = LoggerFactory.getLogger(SensorStatsDTO.class);
 
     String sid;
     String measureUnit; //mis
@@ -21,6 +25,7 @@ public class SensorStatsDTO {
     Double min;
     Double avg;
     Double sum;
+    Double diff;
 
     public String getSid() {
         return sid;
@@ -126,6 +131,14 @@ public class SensorStatsDTO {
         this.sum = sum;
     }
 
+    public Double getDiff() {
+        return diff;
+    }
+
+    public void setDiff(Double diff) {
+        this.diff = diff;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -160,5 +173,36 @@ public class SensorStatsDTO {
             '\'' +
             '}'
         );
+    }
+
+    public void recalculate() {
+        this.setMax(null);
+        this.setMin(null);
+        this.setDiff(null);
+        this.setCount(null);
+        this.setAvg(null);
+        this.setSum(null);
+        this.setFirstValue(null);
+        this.setLastValue(null);
+        values.stream().min(Comparator.comparing(c -> c.getCreationDate().getEpochSecond())).ifPresent(this::setFirstValue);
+        values.stream().max(Comparator.comparing(c -> c.getCreationDate().getEpochSecond())).ifPresent(this::setLastValue);
+
+        if (Objects.equals(this.getType(), "TELLTALE") || Objects.equals(this.getType(), "BOOLEAN")) {
+            this.setCount(
+                    values.stream().map(SensorValDTO::getValue).collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                );
+        } else {
+            try {
+                List<Double> doubleList = values.stream().map(SensorValDTO::getValue).map(Double::parseDouble).collect(Collectors.toList());
+                doubleList.stream().max(Comparator.naturalOrder()).ifPresent(this::setMax);
+                doubleList.stream().min(Comparator.naturalOrder()).ifPresent(this::setMin);
+                this.setDiff(Optional.ofNullable(this.getMax()).orElse(0.0) - Optional.ofNullable(this.getMin()).orElse(0.0));
+                this.setAvg(doubleList.stream().reduce(0.0, Double::sum) / doubleList.size());
+                this.setSum(doubleList.stream().reduce(0.0, Double::sum));
+                this.setCount(Collections.singletonMap("total", (long) doubleList.size()));
+            } catch (Exception e) {
+                log.error("Cannot parse double form values. {}", this);
+            }
+        }
     }
 }

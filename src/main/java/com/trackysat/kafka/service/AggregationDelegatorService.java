@@ -3,6 +3,7 @@ package com.trackysat.kafka.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
+import com.trackysat.kafka.domain.aggregations.SensorValDTO;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.service.mapper.DailyAggregationMapper;
@@ -11,6 +12,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -76,34 +78,49 @@ public class AggregationDelegatorService {
                 return this.aggregateRealTime(deviceId, dateFrom, dateTo);
             } else {
                 log.info("[{}] Using daily aggregation data filter by hours", deviceId);
-                List<DailyAggregationDTO> dateData = dailyAggregationService.getByDeviceIdAndDateRange(
-                    deviceId,
-                    DateUtils.atStartOfDate(dateFrom),
-                    dateTo
-                );
-                List<PositionDTO> positions = dateData
-                    .stream()
-                    .map(DailyAggregationDTO::getPositions)
-                    .flatMap(List::stream)
-                    .filter(positionDTO -> positionDTO.getTimestamp().isAfter(dateFrom) && positionDTO.getTimestamp().isBefore(dateTo))
-                    .collect(Collectors.toList());
+                List<DailyAggregationDTO> dateData = dailyAggregationService.getByDeviceIdAndDateRange(deviceId, dateFrom, dateTo);
                 return dateData
                     .stream()
                     .findFirst()
-                    .map(da -> {
-                        da.setPositions(positions);
-                        return da;
-                    })
+                    .map(dateDataForDay -> filterHoursInDailyAggregation(dateDataForDay, dateFrom, dateTo))
                     .map(List::of)
                     .orElse(new ArrayList<>());
             }
         } else if (days.size() < MAX_DAY_TO_USE_DAILY) {
             log.info("[{}] Using daily aggregation data", deviceId);
-            return dailyAggregationService.getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo);
+            return dailyAggregationService
+                .getByDeviceIdAndDateRange(deviceId, dateFrom, dateTo)
+                .stream()
+                .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
+                .collect(Collectors.toList());
         } else {
             log.info("[{}] Using monthly aggregation data", deviceId);
-            return monthlyAggregationService.getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo);
+            return monthlyAggregationService
+                .getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo)
+                .stream()
+                .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
+                .collect(Collectors.toList());
         }
+    }
+
+    private DailyAggregationDTO filterHoursInDailyAggregation(DailyAggregationDTO dailyAggregationDTO, Instant dateFrom, Instant dateTo) {
+        List<PositionDTO> filteredPositions = dailyAggregationDTO
+            .getPositions()
+            .stream()
+            .filter(positionDTO -> positionDTO.getTimestamp().isAfter(dateFrom) && positionDTO.getTimestamp().isBefore(dateTo))
+            .collect(Collectors.toList());
+        dailyAggregationDTO.setPositions(filteredPositions);
+        for (Map.Entry<String, SensorStatsDTO> sensor : dailyAggregationDTO.getSensors().entrySet()) {
+            List<SensorValDTO> filteredValues = sensor
+                .getValue()
+                .getValues()
+                .stream()
+                .filter(v -> v.getCreationDate().isAfter(dateFrom) && v.getCreationDate().isBefore(dateTo))
+                .collect(Collectors.toList());
+            sensor.getValue().setValues(filteredValues);
+            sensor.getValue().recalculate();
+        }
+        return dailyAggregationDTO;
     }
 
     private List<DailyAggregationDTO> aggregateRealTime(String deviceId, Instant dateFrom, Instant dateTo) throws JsonProcessingException {
@@ -170,7 +187,64 @@ public class AggregationDelegatorService {
         log.info("[{}] Finished at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
     }
 
-    // TODO merge with values, add merge for other fields, validate data in db, reprocess
+    public List<SensorStatsDTO> getSensorsSummaryByDeviceIdAndDateRange(
+        List<String> ids,
+        Instant fromDate,
+        Instant toDate,
+        Optional<String> nameFilter
+    ) {
+        List<SensorStatsDTO> summary = new ArrayList<>();
+        Map<String, List<SensorStatsDTO>> mapOfSensors = new HashMap<>();
+        Map<String, List<SensorStatsDTO>> allDevicesSensors = ids
+            .stream()
+            .distinct()
+            .collect(Collectors.toList())
+            .parallelStream()
+            .collect(
+                Collectors.toMap(
+                    Function.identity(),
+                    id -> {
+                        try {
+                            Map<String, SensorStatsDTO> sensors = this.getSensorsByDeviceIdAndDateRange(id, fromDate, toDate);
+                            List<SensorStatsDTO> sensorList = new ArrayList<>();
+                            for (Map.Entry<String, SensorStatsDTO> s : sensors.entrySet()) {
+                                if (nameFilter.isEmpty() || s.getKey().toLowerCase().contains(nameFilter.get())) {
+                                    sensorList.add(s.getValue());
+                                }
+                            }
+                            return sensorList;
+                        } catch (JsonProcessingException e) {
+                            return Collections.emptyList();
+                        }
+                    }
+                )
+            );
+        for (Map.Entry<String, List<SensorStatsDTO>> sensorByDevice : allDevicesSensors.entrySet()) {
+            List<SensorValDTO> filteredValues = sensorByDevice
+                .getValue()
+                .stream()
+                .map(SensorStatsDTO::getValues)
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+            sensorByDevice
+                .getValue()
+                .stream()
+                .findFirst()
+                .ifPresent(s -> {
+                    s.setValues(filteredValues);
+                    s.recalculate();
+                    String key = String.format("%s_%s_%s_%s_%s", s.getSource(), s.getName(), s.getMeasureUnit(), s.getType(), s.getSid());
+                    List<SensorStatsDTO> val = mapOfSensors.containsKey(key) ? mapOfSensors.get(key) : new ArrayList<>();
+                    val.add(s);
+                    mapOfSensors.put(key, val);
+                });
+        }
+        for (Map.Entry<String, List<SensorStatsDTO>> sensorByName : mapOfSensors.entrySet()) {
+            summary.add(sensorByName.getValue().stream().reduce(new SensorStatsDTO(), this::mergeSensors));
+        }
+        return summary;
+    }
+
     public SensorStatsDTO mergeSensors(SensorStatsDTO a, SensorStatsDTO b) {
         try {
             if (b.getFirstValue().getCreationDate().getEpochSecond() < a.getFirstValue().getCreationDate().getEpochSecond()) {
@@ -187,6 +261,7 @@ public class AggregationDelegatorService {
                 a.setMax(b.getMax());
             }
             a.setAvg((b.getAvg() + a.getAvg()) / 2);
+            a.setDiff(a.getDiff() + b.getDiff());
             return a;
         } catch (Exception e) {
             return b;

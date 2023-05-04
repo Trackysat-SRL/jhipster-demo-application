@@ -54,4 +54,8 @@ public class DateUtils {
     public static Instant atStartOfDate(Instant dateFrom) {
         return LocalDate.ofInstant(dateFrom, ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
     }
+
+    public static Instant atEndOfDate(Instant dateFrom) {
+        return LocalDate.ofInstant(dateFrom, ZoneOffset.UTC).atTime(23, 59).toInstant(ZoneOffset.UTC);
+    }
 }

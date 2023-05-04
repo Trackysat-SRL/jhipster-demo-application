@@ -98,12 +98,7 @@ public class DeviceResource {
         Instant fromDate = Instant.parse(from);
         Instant toDate = Instant.parse(to);
         try {
-            List<PositionDTO> trackyEvents = aggregationDelegatorService
-                .getByDeviceIdAndDateRange(id, fromDate, toDate)
-                .stream()
-                .map(DailyAggregationDTO::getPositions)
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+            List<PositionDTO> trackyEvents = aggregationDelegatorService.getPositionsByDeviceIdAndDateRange(id, fromDate, toDate);
             final int start = (int) pageable.getOffset();
             final int end = Math.min((start + pageable.getPageSize()), trackyEvents.size());
             final Page<PositionDTO> page = new PageImpl<>(trackyEvents.subList(start, end), pageable, trackyEvents.size());
@@ -259,39 +254,16 @@ public class DeviceResource {
         log.debug("REST request to getSensorListSummarized: {}, {}, {}, {}", devicesIds.getDevices(), from, to, includeValues);
         Instant fromDate = Instant.parse(from);
         Instant toDate = Instant.parse(to);
-        Map<String, List<SensorStatsDTO>> allDevicesSensors = devicesIds
-            .getDevices()
-            .stream()
-            .distinct()
-            .collect(Collectors.toList())
-            .parallelStream()
-            .collect(
-                Collectors.toMap(
-                    Function.identity(),
-                    id -> {
-                        try {
-                            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(
-                                id,
-                                fromDate,
-                                toDate
-                            );
-                            if (!includeValues) {
-                                sensors.values().forEach(s -> s.setValues(null));
-                            }
-                            return new ArrayList<>(sensors.values());
-                        } catch (JsonProcessingException e) {
-                            return Collections.emptyList();
-                        }
-                    }
-                )
-            );
-        List<SensorStatsDTO> summary = List.of(
-            allDevicesSensors
-                .values()
-                .stream()
-                .flatMap(List::stream)
-                .reduce(new SensorStatsDTO(), aggregationDelegatorService::mergeSensors)
+        List<String> ids = devicesIds.getDevices();
+        List<SensorStatsDTO> summary = aggregationDelegatorService.getSensorsSummaryByDeviceIdAndDateRange(
+            ids,
+            fromDate,
+            toDate,
+            Optional.empty()
         );
+        if (!includeValues) {
+            summary.forEach(s -> s.setValues(null));
+        }
         return ResponseEntity.ok().body(summary);
     }
 
@@ -306,45 +278,16 @@ public class DeviceResource {
         log.debug("REST request to getFilteredSensorSummarized: {}, {}, {}, {}", devicesIds.getDevices(), from, to, includeValues);
         Instant fromDate = Instant.parse(from);
         Instant toDate = Instant.parse(to);
-        Map<String, List<SensorStatsDTO>> allDevicesSensors = devicesIds
-            .getDevices()
-            .stream()
-            .distinct()
-            .collect(Collectors.toList())
-            .parallelStream()
-            .collect(
-                Collectors.toMap(
-                    Function.identity(),
-                    id -> {
-                        try {
-                            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(
-                                id,
-                                fromDate,
-                                toDate
-                            );
-                            List<SensorStatsDTO> stats = sensors
-                                .entrySet()
-                                .stream()
-                                .filter(e -> e.getKey().toLowerCase().contains(sensor.toLowerCase()))
-                                .map(Map.Entry::getValue)
-                                .collect(Collectors.toList());
-                            if (!includeValues) {
-                                stats.forEach(s -> s.setValues(null));
-                            }
-                            return stats;
-                        } catch (JsonProcessingException e) {
-                            return Collections.emptyList();
-                        }
-                    }
-                )
-            );
-        List<SensorStatsDTO> summary = List.of(
-            allDevicesSensors
-                .values()
-                .stream()
-                .flatMap(List::stream)
-                .reduce(new SensorStatsDTO(), aggregationDelegatorService::mergeSensors)
+        List<String> ids = devicesIds.getDevices();
+        List<SensorStatsDTO> summary = aggregationDelegatorService.getSensorsSummaryByDeviceIdAndDateRange(
+            ids,
+            fromDate,
+            toDate,
+            Optional.ofNullable(sensor)
         );
+        if (!includeValues) {
+            summary.forEach(s -> s.setValues(null));
+        }
         return ResponseEntity.ok().body(summary);
     }
 }
