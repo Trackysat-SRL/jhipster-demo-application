@@ -3,6 +3,7 @@ package com.trackysat.kafka.service.mapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.trackysat.kafka.domain.DailyAggregation;
+import com.trackysat.kafka.domain.MonthlyAggregation;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.domain.aggregations.SensorValDTO;
@@ -84,6 +85,29 @@ public class DailyAggregationMapper {
             sensorMap =
                 !Strings.isEmpty(dailyAggregation.getSensors())
                     ? JSONUtils.toJson(dailyAggregation.getSensors(), new TypeReference<Map<String, SensorStatsDTO>>() {})
+                    : sensorMap;
+        } catch (JsonProcessingException e) {
+            log.error("Couldnt parse from database. {}", e.getMessage());
+        }
+        d.setPositions(positions);
+        d.setSensors(sensorMap);
+        return d;
+    }
+
+    public DailyAggregationDTO monthlyToDTO(MonthlyAggregation monthlyAggregation) {
+        DailyAggregationDTO d = new DailyAggregationDTO();
+        d.setDeviceId(monthlyAggregation.getDeviceId());
+        d.setAggregatedDate(monthlyAggregation.getAggregatedDate());
+        List<PositionDTO> positions = new ArrayList<>();
+        Map<String, SensorStatsDTO> sensorMap = new HashMap<>();
+        try {
+            positions =
+                !Strings.isEmpty(monthlyAggregation.getPositions())
+                    ? JSONUtils.toJson(monthlyAggregation.getPositions(), new TypeReference<List<PositionDTO>>() {})
+                    : positions;
+            sensorMap =
+                !Strings.isEmpty(monthlyAggregation.getSensors())
+                    ? JSONUtils.toJson(monthlyAggregation.getSensors(), new TypeReference<Map<String, SensorStatsDTO>>() {})
                     : sensorMap;
         } catch (JsonProcessingException e) {
             log.error("Couldnt parse from database. {}", e.getMessage());

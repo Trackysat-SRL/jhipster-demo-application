@@ -7,6 +7,8 @@ import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.domain.aggregations.SensorValDTO;
 import com.trackysat.kafka.repository.MonthlyAggregationRepository;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
+import com.trackysat.kafka.service.mapper.DailyAggregationMapper;
+import com.trackysat.kafka.utils.DateUtils;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.time.Instant;
 import java.util.*;
@@ -27,8 +29,14 @@ public class MonthlyAggregationService {
 
     private final MonthlyAggregationRepository monthlyAggregationRepository;
 
-    public MonthlyAggregationService(MonthlyAggregationRepository monthlyAggregationRepository) {
+    private final DailyAggregationMapper dailyAggregationMapper;
+
+    public MonthlyAggregationService(
+        MonthlyAggregationRepository monthlyAggregationRepository,
+        DailyAggregationMapper dailyAggregationMapper
+    ) {
         this.monthlyAggregationRepository = monthlyAggregationRepository;
+        this.dailyAggregationMapper = dailyAggregationMapper;
     }
 
     public Optional<MonthlyAggregation> getOne() {
@@ -40,7 +48,11 @@ public class MonthlyAggregationService {
     }
 
     public List<DailyAggregationDTO> getByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
-        return null;
+        return monthlyAggregationRepository
+            .findOneByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), DateUtils.atEndOfDate(dateTo))
+            .stream()
+            .map(dailyAggregationMapper::monthlyToDTO)
+            .collect(Collectors.toList());
     }
 
     public void process(String deviceId, Instant day, List<DailyAggregationDTO> events) throws JsonProcessingException {

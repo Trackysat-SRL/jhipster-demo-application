@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AggregationDelegatorService {
 
-    private static final int MAX_DAY_TO_USE_DAILY = 60;
+    private static final int MAX_DAY_TO_USE_DAILY = 31;
 
     private final Logger log = LoggerFactory.getLogger(DailyAggregationService.class);
 
@@ -95,11 +95,7 @@ public class AggregationDelegatorService {
                 .collect(Collectors.toList());
         } else {
             log.info("[{}] Using monthly aggregation data", deviceId);
-            return monthlyAggregationService
-                .getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo)
-                .stream()
-                .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
-                .collect(Collectors.toList());
+            return monthlyAggregationService.getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo);
         }
     }
 
