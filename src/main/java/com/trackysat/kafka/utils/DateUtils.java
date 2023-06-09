@@ -34,6 +34,9 @@ public class DateUtils {
             .datesUntil(LocalDate.ofInstant(endDate, ZoneId.systemDefault()))
             .forEach(d -> {
                 if (d.getMonth() != now.getMonth()) {
+                    //Essendo un mese diverso la data che viene passata è quella del giorno 1
+                    months.put(d.getMonth(), d);
+                } else {
                     months.put(d.getMonth(), d);
                 }
             });

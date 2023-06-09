@@ -18,6 +18,8 @@ public class SensorStatsDTO {
     String type; // typ
     String source; //src
     List<SensorValDTO> values;
+
+    List<SensorValDTO> lastDailyValues;
     Map<String, Long> count;
     SensorValDTO firstValue;
     SensorValDTO lastValue;
@@ -137,6 +139,14 @@ public class SensorStatsDTO {
 
     public void setDiff(Double diff) {
         this.diff = diff;
+    }
+
+    public List<SensorValDTO> getLastDailyValues() {
+        return lastDailyValues;
+    }
+
+    public void setLastDailyValues(List<SensorValDTO> lastDailyValues) {
+        this.lastDailyValues = lastDailyValues;
     }
 
     @Override

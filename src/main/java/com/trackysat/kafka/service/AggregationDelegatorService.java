@@ -11,6 +11,7 @@ import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -86,14 +87,14 @@ public class AggregationDelegatorService {
                     .map(List::of)
                     .orElse(new ArrayList<>());
             }
-        } else if (days.size() < MAX_DAY_TO_USE_DAILY) {
+        }/* else if (days.size() < MAX_DAY_TO_USE_DAILY) {
             log.info("[{}] Using daily aggregation data", deviceId);
             return dailyAggregationService
                 .getByDeviceIdAndDateRange(deviceId, dateFrom, dateTo)
                 .stream()
                 .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
                 .collect(Collectors.toList());
-        } else {
+        } */ else {
             log.info("[{}] Using monthly aggregation data", deviceId);
             return monthlyAggregationService.getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo);
         }
@@ -172,7 +173,17 @@ public class AggregationDelegatorService {
         for (LocalDate d : months) {
             try {
                 log.debug("[{}] Started processing month " + d.getMonth().toString(), deviceId);
-                trackyEventQueryService.processMonth(deviceId, d);
+
+                Instant startOfFirstDay = d.withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+                /*Instant endOfLastDay = d
+                    .withDayOfMonth(d.getMonth().length(d.isLeapYear()))
+                    .atStartOfDay()
+                    .toInstant(ZoneOffset.UTC)
+                    .plus(1, ChronoUnit.DAYS);
+                */
+                Instant endOfLastDay = DateUtils.atEndOfDate(d.atStartOfDay().toInstant(ZoneOffset.UTC));
+
+                trackyEventQueryService.processMonth(deviceId, d, startOfFirstDay, endOfLastDay);
                 log.debug("[{}] Finished processing month " + d.getMonth().toString(), deviceId);
                 jobStatusService.setLastMonthProcessed(deviceId, d, null);
             } catch (Exception e) {

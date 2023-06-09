@@ -1,11 +1,13 @@
 package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.netflix.servo.tag.InjectableTag;
 import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.repository.TrackyEventRepository;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
+import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -68,13 +70,9 @@ public class TrackyEventQueryService {
         log.info("[{}] [{}] Finished processing day", deviceId, day);
     }
 
-    public void processMonth(String deviceId, LocalDate month) throws JsonProcessingException {
-        Instant startOfFirstDay = month.withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant endOfLastDay = month
-            .withDayOfMonth(month.getMonth().length(month.isLeapYear()))
-            .atStartOfDay()
-            .toInstant(ZoneOffset.UTC)
-            .plus(1, ChronoUnit.DAYS);
+    public void processMonth(String deviceId, LocalDate month, Instant startOfFirstDay, Instant endOfLastDay)
+        throws JsonProcessingException {
+        log.debug("[{}] range of date " + startOfFirstDay + " - " + endOfLastDay, deviceId);
         List<DailyAggregationDTO> events = dailyAggregationService.getByDeviceIdAndDateRange(deviceId, startOfFirstDay, endOfLastDay);
         log.info("[{}] [{}] Events found: " + events.size(), deviceId, month.getMonth());
         monthlyAggregationService.process(deviceId, startOfFirstDay, events);

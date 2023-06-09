@@ -90,6 +90,19 @@ public class MonthlyAggregationRepository {
         return monthlyAggregation;
     }
 
+    public MonthlyAggregation update(MonthlyAggregation monthlyAggregation) {
+        Set<ConstraintViolation<MonthlyAggregation>> violations = validator.validate(monthlyAggregation);
+        if (violations != null && !violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
+        }
+        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
+        batch.addStatement(
+            monthlyAggregationDao.updateQuery(monthlyAggregation, monthlyAggregation.getDeviceId(), monthlyAggregation.getAggregatedDate())
+        );
+        session.execute(batch.build());
+        return monthlyAggregation;
+    }
+
     public void delete(MonthlyAggregation monthlyAggregation) {
         BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
         batch.addStatement(monthlyAggregationDao.deleteQuery(monthlyAggregation));
@@ -119,6 +132,9 @@ interface MonthlyAggregationDao {
 
     @Delete
     BoundStatement deleteQuery(MonthlyAggregation monthlyAggregation);
+
+    @Update(customWhereClause = "device_id = :deviceId and aggregated_date = :aggregatedDate")
+    BoundStatement updateQuery(MonthlyAggregation monthlyAggregation, String deviceId, Instant aggregatedDate);
 }
 
 @Mapper

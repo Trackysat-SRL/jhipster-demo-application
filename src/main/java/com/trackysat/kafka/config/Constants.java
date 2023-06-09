@@ -10,6 +10,9 @@ public final class Constants {
 
     public static final String SYSTEM = "system";
     public static final String DEFAULT_LANGUAGE = "en";
+    public static final String SENSOR_TOT_VEHICLE_DIST = "TotalVehicleDistance";
+    public static final String SENSOR_TIME_ENGINE_LIFE = "TimeEngineLife";
+    public static final String SENSOR_TOT_FUEL = "TotalFuel";
 
     private Constants() {}
 }

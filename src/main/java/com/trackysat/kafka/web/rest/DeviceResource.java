@@ -290,36 +290,34 @@ public class DeviceResource {
         }
         return ResponseEntity.ok().body(summary);
     }
-    
-    
-    @GetMapping("/summaryAllDevices/sensors/{sensor}")
+    /*    @GetMapping("/summaryAllDevices/sensors/{sensor}")
     public ResponseEntity<List<SensorStatsDTO>> summaryAllDevices(
         @PathVariable String sensor,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
         @RequestParam(value = "values", required = false, defaultValue = "false") Boolean includeValues
     ) {
-    	
-    	
+
+
        log.debug("REST request to get a page of Device list");
         BulkDeviceRequestDTO bulkDeviceRequestDTO = new BulkDeviceRequestDTO();
-        
+
         List<String> devicesStringUid = new  ArrayList<String>();
-        
+
         List<Device> allDevices = deviceService.getAll();
         log.info("reprocessing {} allDevices", allDevices.size());
-        
+
         allDevices.forEach(dev -> {
             try {
             	devicesStringUid.add(dev.getUid());
-               
+
             } catch (Exception e) {
                 log.error("error processing device with uid: {}. Exception: {}", devicesStringUid, e);
             }
         });
-        
+
         bulkDeviceRequestDTO.setDevices(devicesStringUid);
-        
+
         log.debug("REST request to getFilteredSensorSummarized: {}, {}, {}, {}", devicesStringUid, from, to, includeValues);
         Instant fromDate = Instant.parse(from);
         Instant toDate = Instant.parse(to);
@@ -363,10 +361,10 @@ public class DeviceResource {
         );
         return ResponseEntity.ok().body(summary);
     }
-    
-    
-    
-    
+
+
+
+
     @GetMapping("/bulkAllDevices/sensors/{sensor}")
     public ResponseEntity<Map<String, List<SensorStatsDTO>>> getFilteredSensorAllDevicesBulk(
         @PathVariable String sensor,
@@ -374,27 +372,27 @@ public class DeviceResource {
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
         @RequestParam(value = "values", required = false, defaultValue = "false") Boolean includeValues
     ) {
-    	
+
     	  log.debug("REST request to get a page of Device list");
           BulkDeviceRequestDTO bulkDeviceRequestDTO = new BulkDeviceRequestDTO();
-          
+
           List<String> devicesStringUid = new  ArrayList<String>();
-          
+
           List<Device> allDevices = deviceService.getAll();
           log.info("reprocessing {} allDevices", allDevices.size());
-          
+
           allDevices.forEach(dev -> {
               try {
               	devicesStringUid.add(dev.getUid());
-                 
+
               } catch (Exception e) {
                   log.error("error processing device with uid: {}. Exception: {}", devicesStringUid, e);
               }
           });
-          
+
           bulkDeviceRequestDTO.setDevices(devicesStringUid);
-    	
-    	
+
+
         log.debug("REST request to getFilteredSensorAllDevicesBulk: {}, {}, {}, {}", devicesStringUid, from, to, includeValues);
         Instant fromDate = Instant.parse(from);
         Instant toDate = Instant.parse(to);
@@ -430,5 +428,5 @@ public class DeviceResource {
                 )
             );
         return ResponseEntity.ok().body(allDevicesSensorsDto);
-    }
+    }*/
 }

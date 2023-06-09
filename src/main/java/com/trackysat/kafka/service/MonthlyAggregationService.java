@@ -1,6 +1,8 @@
 package com.trackysat.kafka.service;
 
+import com.datastax.oss.driver.internal.core.util.CollectionsUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.trackysat.kafka.config.Constants;
 import com.trackysat.kafka.domain.MonthlyAggregation;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
@@ -56,7 +58,11 @@ public class MonthlyAggregationService {
     }
 
     public void process(String deviceId, Instant day, List<DailyAggregationDTO> events) throws JsonProcessingException {
-        this.monthlyAggregationRepository.save(buildMonthlyAggregation(deviceId, day, events));
+        MonthlyAggregation mtAgg = buildMonthlyAggregation(deviceId, day, events);
+        if (this.monthlyAggregationRepository.findById(deviceId, day).isPresent()) this.monthlyAggregationRepository.update(
+                mtAgg
+            ); else this.monthlyAggregationRepository.save(mtAgg);
+        //this.monthlyAggregationRepository.save(buildMonthlyAggregation(deviceId, day, events));
     }
 
     private MonthlyAggregation buildMonthlyAggregation(String deviceId, Instant day, List<DailyAggregationDTO> events)
@@ -75,6 +81,12 @@ public class MonthlyAggregationService {
             Map<String, SensorStatsDTO> sensorIdDTOSensorValDTOMap = event.getSensors();
             Set<Map.Entry<String, SensorStatsDTO>> entrySet = sensorIdDTOSensorValDTOMap.entrySet();
             for (Map.Entry<String, SensorStatsDTO> k : entrySet) {
+                if (
+                    k.getValue().getName().equals(Constants.SENSOR_TOT_VEHICLE_DIST) ||
+                    k.getValue().getName().equals(Constants.SENSOR_TIME_ENGINE_LIFE) ||
+                    k.getValue().getName().equals(Constants.SENSOR_TOT_FUEL)
+                ) calculateDailyValue(k.getValue(), k.getValue().getName());
+
                 sensors.merge(k.getKey(), k.getValue(), this::mergeSensorMaps);
             }
         }
@@ -84,7 +96,16 @@ public class MonthlyAggregationService {
         sensors
             .values()
             .forEach(stat -> {
+                if (
+                    stat.getName().equals(Constants.SENSOR_TOT_VEHICLE_DIST) ||
+                    stat.getName().equals(Constants.SENSOR_TIME_ENGINE_LIFE) ||
+                    stat.getName().equals(Constants.SENSOR_TOT_FUEL)
+                ) {
+                    stat.setValues(stat.getLastDailyValues());
+                    stat.setLastDailyValues(null);
+                }
                 if (stat.getValues().size() > 500) {
+                    log.info("Size value > " + 500 + " sensor " + stat.getName());
                     stat.setValues(new ArrayList<>());
                 }
             });
@@ -110,6 +131,16 @@ public class MonthlyAggregationService {
 
         allValues.stream().min(Comparator.comparing(c -> c.getCreationDate().getEpochSecond())).ifPresent(sensorStatsDTO::setFirstValue);
         allValues.stream().max(Comparator.comparing(c -> c.getCreationDate().getEpochSecond())).ifPresent(sensorStatsDTO::setLastValue);
+        if (
+            sensorStatsDTO.getName().equals((Constants.SENSOR_TOT_VEHICLE_DIST)) ||
+            sensorStatsDTO.getName().equals((Constants.SENSOR_TIME_ENGINE_LIFE)) ||
+            sensorStatsDTO.getName().equals((Constants.SENSOR_TOT_FUEL))
+        ) {
+            List<SensorValDTO> dailyValues = Stream
+                .concat(sensorStatsDTO.getLastDailyValues().stream(), sensorStatsDTO1.getLastDailyValues().stream())
+                .collect(Collectors.toList());
+            sensorStatsDTO.setLastDailyValues(dailyValues);
+        }
 
         if (Objects.equals(sensorStatsDTO.getType(), "TELLTALE") || Objects.equals(sensorStatsDTO.getType(), "BOOLEAN")) {
             sensorStatsDTO.setCount(
@@ -136,5 +167,23 @@ public class MonthlyAggregationService {
         }
 
         return sensorStatsDTO;
+    }
+
+    private static void calculateDailyValue(SensorStatsDTO sensorStatsDTO, String nameSensor) {
+        if (sensorStatsDTO.getName().equals(nameSensor)) {
+            SensorValDTO firsValue = sensorStatsDTO.getValues().get(0);
+            SensorValDTO lastValue = sensorStatsDTO.getValues().get(sensorStatsDTO.getValues().size() - 1);
+
+            if (Objects.nonNull(lastValue)) {
+                SensorValDTO diffValue = new SensorValDTO();
+                double diff = Double.parseDouble(lastValue.getValue()) - Double.parseDouble(firsValue.getValue());
+                diffValue.setValue(Double.toString(diff));
+                diffValue.setCreationDate(lastValue.getCreationDate());
+                if (Objects.isNull(sensorStatsDTO.getLastDailyValues())) {
+                    sensorStatsDTO.setLastDailyValues(new ArrayList<>());
+                }
+                sensorStatsDTO.getLastDailyValues().add(diffValue);
+            }
+        }
     }
 }
