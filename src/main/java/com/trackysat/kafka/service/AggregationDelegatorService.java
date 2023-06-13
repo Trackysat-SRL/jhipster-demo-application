@@ -96,11 +96,7 @@ public class AggregationDelegatorService {
                 .collect(Collectors.toList());
         } */else {
             log.info("[{}] Using monthly aggregation data", deviceId);
-            return monthlyAggregationService
-                .getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo)
-                .stream()
-                .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
-                .collect(Collectors.toList());
+            return monthlyAggregationService.getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo);
         }
     }
 
