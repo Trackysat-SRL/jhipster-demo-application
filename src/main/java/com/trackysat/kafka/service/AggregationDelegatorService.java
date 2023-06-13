@@ -154,7 +154,7 @@ public class AggregationDelegatorService {
                 log.debug("[{}] Started processing day " + d.toString(), deviceId);
                 trackyEventQueryService.processDay(deviceId, d);
                 log.debug("[{}] Finished processing day " + d, deviceId);
-                ///jobStatusService.setLastDayProcessed(deviceId, d, null);
+                jobStatusService.setLastDayProcessed(deviceId, d, null);
             } catch (Exception e) {
                 log.error("[{}] [{}] Error processing day. ERROR: {}", deviceId, d, e.getMessage());
             }
