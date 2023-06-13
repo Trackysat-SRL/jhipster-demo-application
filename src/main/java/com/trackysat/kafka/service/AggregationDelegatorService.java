@@ -87,16 +87,20 @@ public class AggregationDelegatorService {
                     .map(List::of)
                     .orElse(new ArrayList<>());
             }
-        }/* else if (days.size() < MAX_DAY_TO_USE_DAILY) {
+        } /* else if (days.size() < MAX_DAY_TO_USE_DAILY) {
             log.info("[{}] Using daily aggregation data", deviceId);
             return dailyAggregationService
                 .getByDeviceIdAndDateRange(deviceId, dateFrom, dateTo)
                 .stream()
                 .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
                 .collect(Collectors.toList());
-        } */ else {
+        } */else {
             log.info("[{}] Using monthly aggregation data", deviceId);
-            return monthlyAggregationService.getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo);
+            return monthlyAggregationService
+                .getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo)
+                .stream()
+                .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
+                .collect(Collectors.toList());
         }
     }
 
@@ -150,7 +154,7 @@ public class AggregationDelegatorService {
                 log.debug("[{}] Started processing day " + d.toString(), deviceId);
                 trackyEventQueryService.processDay(deviceId, d);
                 log.debug("[{}] Finished processing day " + d, deviceId);
-                jobStatusService.setLastDayProcessed(deviceId, d, null);
+                ///jobStatusService.setLastDayProcessed(deviceId, d, null);
             } catch (Exception e) {
                 log.error("[{}] [{}] Error processing day. ERROR: {}", deviceId, d, e.getMessage());
             }
@@ -175,12 +179,6 @@ public class AggregationDelegatorService {
                 log.debug("[{}] Started processing month " + d.getMonth().toString(), deviceId);
 
                 Instant startOfFirstDay = d.withDayOfMonth(1).atStartOfDay().toInstant(ZoneOffset.UTC);
-                /*Instant endOfLastDay = d
-                    .withDayOfMonth(d.getMonth().length(d.isLeapYear()))
-                    .atStartOfDay()
-                    .toInstant(ZoneOffset.UTC)
-                    .plus(1, ChronoUnit.DAYS);
-                */
                 Instant endOfLastDay = DateUtils.atEndOfDate(d.atStartOfDay().toInstant(ZoneOffset.UTC));
 
                 trackyEventQueryService.processMonth(deviceId, d, startOfFirstDay, endOfLastDay);

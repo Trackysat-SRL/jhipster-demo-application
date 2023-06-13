@@ -27,7 +27,7 @@ public class DateUtils {
     }
 
     public static List<LocalDate> getMonthsBetween(Instant startDate, Instant endDate) {
-        Map<Month, LocalDate> months = new HashMap<>();
+        Map<Integer, LocalDate> months = new TreeMap<>();
         LocalDate now = LocalDate.now();
         LocalDate
             .ofInstant(startDate.plus(1, ChronoUnit.DAYS), ZoneId.systemDefault())
@@ -35,9 +35,9 @@ public class DateUtils {
             .forEach(d -> {
                 if (d.getMonth() != now.getMonth()) {
                     //Essendo un mese diverso la data che viene passata è quella del giorno 1
-                    months.put(d.getMonth(), d);
+                    months.put(d.getMonthValue(), d);
                 } else {
-                    months.put(d.getMonth(), d);
+                    months.put(d.getMonthValue(), d);
                 }
             });
         return new ArrayList<>(months.values());

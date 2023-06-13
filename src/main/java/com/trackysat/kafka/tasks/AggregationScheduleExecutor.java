@@ -35,10 +35,8 @@ public class AggregationScheduleExecutor {
         deviceService.getAll().stream().map(Device::getUid).forEach(aggregationDelegatorService::dailyProcess);
     }
 
-    //@Scheduled(cron = "0 0 1 * * *")
-    @Scheduled(cron = "0 0 10 * * *")
+    @Scheduled(cron = "0 0 1 * * *")
     public void processAllDevicesMonthly() {
-        //deviceService.getOne("352625695875912").stream().map(Device::getUid).forEach(aggregationDelegatorService::monthlyProcess);
         deviceService.getAll().stream().map(Device::getUid).forEach(aggregationDelegatorService::monthlyProcess);
     }
 

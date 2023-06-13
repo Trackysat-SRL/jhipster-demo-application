@@ -70,7 +70,9 @@ public class MonthlyAggregationService {
         MonthlyAggregation da = new MonthlyAggregation();
         da.setDeviceId(deviceId);
         da.setAggregatedDate(day);
-        da.setPositions(processPositions(events));
+        //TODO per adesso commentate e settate a null, da capire se utile scriverle su un altra tabella
+        da.setPositions(null);
+        //da.setPositions(processPositions(events));
         da.setSensors(processSensors(events));
         return da;
     }
@@ -136,10 +138,12 @@ public class MonthlyAggregationService {
             sensorStatsDTO.getName().equals((Constants.SENSOR_TIME_ENGINE_LIFE)) ||
             sensorStatsDTO.getName().equals((Constants.SENSOR_TOT_FUEL))
         ) {
-            List<SensorValDTO> dailyValues = Stream
-                .concat(sensorStatsDTO.getLastDailyValues().stream(), sensorStatsDTO1.getLastDailyValues().stream())
-                .collect(Collectors.toList());
-            sensorStatsDTO.setLastDailyValues(dailyValues);
+            if (Objects.nonNull(sensorStatsDTO.getLastDailyValues()) && Objects.nonNull(sensorStatsDTO1.getLastDailyValues())) {
+                List<SensorValDTO> dailyValues = Stream
+                    .concat(sensorStatsDTO.getLastDailyValues().stream(), sensorStatsDTO1.getLastDailyValues().stream())
+                    .collect(Collectors.toList());
+                sensorStatsDTO.setLastDailyValues(dailyValues);
+            }
         }
 
         if (Objects.equals(sensorStatsDTO.getType(), "TELLTALE") || Objects.equals(sensorStatsDTO.getType(), "BOOLEAN")) {
@@ -170,7 +174,7 @@ public class MonthlyAggregationService {
     }
 
     private static void calculateDailyValue(SensorStatsDTO sensorStatsDTO, String nameSensor) {
-        if (sensorStatsDTO.getName().equals(nameSensor)) {
+        if (sensorStatsDTO.getName().equals(nameSensor) && sensorStatsDTO.getValues().size() >= 1) {
             SensorValDTO firsValue = sensorStatsDTO.getValues().get(0);
             SensorValDTO lastValue = sensorStatsDTO.getValues().get(sensorStatsDTO.getValues().size() - 1);
 
