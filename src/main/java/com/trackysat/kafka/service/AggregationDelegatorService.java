@@ -25,7 +25,7 @@ public class AggregationDelegatorService {
 
     private static final int MAX_DAY_TO_USE_DAILY = 31;
 
-    private final Logger log = LoggerFactory.getLogger(DailyAggregationService.class);
+    private final Logger log = LoggerFactory.getLogger(AggregationDelegatorService.class);
 
     private final DailyAggregationMapper dailyAggregationMapper;
 

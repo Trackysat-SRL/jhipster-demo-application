@@ -61,13 +61,25 @@ public class TrackyEventRepository {
     }
 
     public List<TrackyEvent> findOneByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
+        log.info("Start query findOneByDeviceIdAndDateRange device_id " + deviceId + " from_date " + dateFrom + " to_date " + dateTo);
         BoundStatement stmt = findAllByDeviceIdAndDates
             .bind()
             .setString("device_id", deviceId)
             .setInstant("from_date", dateFrom)
             .setInstant("to_date", dateTo);
         ResultSet rs = session.execute(stmt);
-        return rs.all().stream().map(this::fromRow).collect(Collectors.toList());
+        List<Row> listrow = rs.all();
+        log.info(
+            "End query findOneByDeviceIdAndDateRange device_id " +
+            deviceId +
+            " from_date " +
+            dateFrom +
+            " to_date " +
+            dateTo +
+            "tot row " +
+            listrow.size()
+        );
+        return listrow.stream().map(this::fromRow).collect(Collectors.toList());
     }
 
     // -- CRUD -- //
