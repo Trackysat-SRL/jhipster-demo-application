@@ -156,6 +156,8 @@ public class KafkaConsumerConfig {
         factory.setRecordFilterStrategy(new CustomRecordFilterStrategy());
 
         factory.getContainerProperties().setConsumerTaskExecutor(consumerProcessorExecutor());
+        //Da decommentare se si vuole stoppare il consumer
+        //factory.setAutoStartup(false);
         return factory;
     }
 
