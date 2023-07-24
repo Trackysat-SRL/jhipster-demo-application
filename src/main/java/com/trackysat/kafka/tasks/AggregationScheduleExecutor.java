@@ -30,7 +30,7 @@ public class AggregationScheduleExecutor {
         this.deadLetterQueueService = deadLetterQueueService;
     }
 
-    @Scheduled(cron = "0 0 */3 * * *")
+    @Scheduled(cron = "0 0 */1 * * *")
     public void processAllDevicesDaily() {
         deviceService.getAll().stream().map(Device::getUid).forEach(aggregationDelegatorService::dailyProcess);
     }
