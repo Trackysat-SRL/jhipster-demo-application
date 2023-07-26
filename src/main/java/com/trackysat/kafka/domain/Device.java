@@ -27,6 +27,8 @@ public class Device implements Serializable {
     String ver;
     String typ;
 
+    String companyname;
+
     public String getUid() {
         return uid;
     }
@@ -67,6 +69,14 @@ public class Device implements Serializable {
         this.typ = typ;
     }
 
+    public String getCompanyname() {
+        return companyname;
+    }
+
+    public void setCompanyname(String companyname) {
+        this.companyname = companyname;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -90,6 +100,7 @@ public class Device implements Serializable {
             ", cla='" + cla + '\'' +
             ", ver='" + ver + '\'' +
             ", typ='" + typ + '\'' +
+            ", companyname='" + companyname + '\'' +
             '}';
     }
 }

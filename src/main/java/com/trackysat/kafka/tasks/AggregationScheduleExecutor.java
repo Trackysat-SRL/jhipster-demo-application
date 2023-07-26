@@ -4,6 +4,10 @@ import com.trackysat.kafka.domain.Device;
 import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.DeadLetterQueueService;
 import com.trackysat.kafka.service.DeviceService;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -32,7 +36,16 @@ public class AggregationScheduleExecutor {
 
     @Scheduled(cron = "0 0 */1 * * *")
     public void processAllDevicesDaily() {
-        deviceService.getAll().stream().map(Device::getUid).forEach(aggregationDelegatorService::dailyProcess);
+        AtomicInteger totDevice = new AtomicInteger(1);
+        List<Device> listDev = deviceService
+            .getAll()
+            .stream()
+            .filter(d -> Objects.nonNull(d.getCompanyname()) && d.getCompanyname().equals("CGT"))
+            .collect(Collectors.toList());
+        listDev.forEach(d -> {
+            aggregationDelegatorService.dailyProcess(d.getUid());
+            log.info("[{}] Elaborated {} of {}", d.getUid(), totDevice.getAndIncrement(), listDev.size());
+        });
     }
 
     @Scheduled(cron = "0 0 1 * * *")
