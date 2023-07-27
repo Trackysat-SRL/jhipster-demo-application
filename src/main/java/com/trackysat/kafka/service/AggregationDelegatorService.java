@@ -136,7 +136,7 @@ public class AggregationDelegatorService {
 
     public void dailyProcess(String deviceId) {
         Instant startDate = Instant.now();
-        log.info("[{}] Started at " + startDate.toString(), deviceId);
+        log.info("[{}] Started dailyProcess at " + startDate.toString(), deviceId);
         Optional<Instant> lastDay = jobStatusService.getLastDayProcessed(deviceId);
         if (lastDay.isEmpty()) {
             log.debug("[{}] Last day was not present, set to yesterday", deviceId);
@@ -156,12 +156,12 @@ public class AggregationDelegatorService {
             }
         }
         Instant endDate = Instant.now();
-        log.info("[{}] Finished at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
+        log.info("[{}] Finished dailyProcess at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
     }
 
     public void monthlyProcess(String deviceId) {
         Instant startDate = Instant.now();
-        log.info("[{}] Started at " + startDate.toString(), deviceId);
+        log.info("[{}] Started monthlyProcess at " + startDate.toString(), deviceId);
         Optional<Instant> lastDay = jobStatusService.getLastMonthProcessed(deviceId);
         if (lastDay.isEmpty()) {
             log.debug("[{}] Last month was not present, set to last month", deviceId);
@@ -185,7 +185,7 @@ public class AggregationDelegatorService {
             }
         }
         Instant endDate = Instant.now();
-        log.info("[{}] Finished at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
+        log.info("[{}] Finished monthlyProcess at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
     }
 
     public List<SensorStatsDTO> getSensorsSummaryByDeviceIdAndDateRange(
