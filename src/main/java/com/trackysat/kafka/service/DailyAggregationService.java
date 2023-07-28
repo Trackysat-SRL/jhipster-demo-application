@@ -6,6 +6,7 @@ import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.domain.aggregations.SensorValDTO;
+import com.trackysat.kafka.domain.vmson.Ets;
 import com.trackysat.kafka.domain.vmson.VmsonCon;
 import com.trackysat.kafka.repository.DailyAggregationRepository;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
@@ -15,9 +16,12 @@ import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.DateUtils;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +71,28 @@ public class DailyAggregationService {
 
     public void process(String deviceId, Instant day, List<TrackyEvent> events) throws JsonProcessingException {
         List<TrackysatEventDTO> eventDTOS = events.stream().map(trackysatEventMapper::toTrackysatEventDTO).collect(Collectors.toList());
+        /*List<TrackysatEventDTO> eventDTOSTomorow = new ArrayList<>();
+        eventDTOS.forEach(v -> {
+            int createDay = v.getCreatedDate().atZone(ZoneId.systemDefault()).getDayOfWeek().getValue();
+            if(createDay != v.getEventDate().atZone(ZoneId.systemDefault()).getDayOfWeek().getValue()){
+                List<VmsonCon> con = v.getCon().stream().filter(c -> c.getEts().getTst().atZone(ZoneId.systemDefault()).getDayOfWeek().getValue() != createDay).collect(Collectors.toList());
+                TrackysatEventDTO mapped = new TrackysatEventDTO();
+                mapped.setDeviceId(v.getDeviceId());
+                mapped.setEventDate(v.getEventDate());
+                mapped.setCreatedDate(con.stream().findFirst().map(VmsonCon::getEts).map(Ets::getTst).orElse(v.getEts().getTst()));
+                mapped.setUid(v.getUid());
+                mapped.setVer(v.getVer());
+                mapped.setCon(con);
+                mapped.setDes(v.getDes());
+                mapped.setEts(v.getEts());
+                mapped.setOri(v.getOri());
+                eventDTOSTomorow.add(mapped);
+            }
+        });*/
         this.dailyAggregationRepository.save(buildDailyAggregation(deviceId, day, eventDTOS));
+        /*if(eventDTOSTomorow.size() > 0){
+            this.dailyAggregationRepository.save(buildDailyAggregation(deviceId, day, eventDTOSTomorow));
+        }*/
     }
 
     private String processPositions(List<TrackysatEventDTO> events) throws JsonProcessingException {
@@ -101,7 +126,11 @@ public class DailyAggregationService {
             .values()
             .forEach(stat -> {
                 if (stat.getValues().size() > 500) {
+                    //salvo solo il primo valore e l'ultmo
+                    List<SensorValDTO> copy = stat.getValues();
                     stat.setValues(new ArrayList<>());
+                    stat.getValues().add(copy.get(0));
+                    stat.getValues().add(copy.get(copy.size() - 1));
                 }
             });
 

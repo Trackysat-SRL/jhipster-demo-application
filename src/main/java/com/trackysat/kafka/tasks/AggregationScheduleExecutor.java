@@ -34,7 +34,7 @@ public class AggregationScheduleExecutor {
         this.deadLetterQueueService = deadLetterQueueService;
     }
 
-    @Scheduled(cron = "0 0 */1 * * *")
+    @Scheduled(cron = "0 0 */3 * * *")
     public void processAllDevicesDaily() {
         AtomicInteger totDevice = new AtomicInteger(1);
         List<Device> listDev = deviceService
