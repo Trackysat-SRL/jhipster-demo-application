@@ -11,6 +11,7 @@ import com.trackysat.kafka.service.mapper.DailyAggregationMapper;
 import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.function.Function;
@@ -37,7 +38,7 @@ public class AggregationDelegatorService {
 
     private final JobStatusService jobStatusService;
 
-    private final DailyAggragationErrorService dailyAggragationErrorService;
+    private final DailyAggregationErrorService dailyAggregationErrorService;
 
     public AggregationDelegatorService(
         TrackyEventQueryService trackyEventQueryService,
@@ -45,14 +46,14 @@ public class AggregationDelegatorService {
         DailyAggregationService dailyAggregationService,
         MonthlyAggregationService monthlyAggregationService,
         JobStatusService jobStatusService,
-        DailyAggragationErrorService dailyAggragationErrorService
+        DailyAggregationErrorService dailyAggregationErrorService
     ) {
         this.trackyEventQueryService = trackyEventQueryService;
         this.dailyAggregationMapper = dailyAggregationMapper;
         this.dailyAggregationService = dailyAggregationService;
         this.monthlyAggregationService = monthlyAggregationService;
         this.jobStatusService = jobStatusService;
-        this.dailyAggragationErrorService = dailyAggragationErrorService;
+        this.dailyAggregationErrorService = dailyAggregationErrorService;
     }
 
     public List<PositionDTO> getPositionsByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo)
@@ -162,7 +163,7 @@ public class AggregationDelegatorService {
                     d.atStartOfDay().toInstant(ZoneOffset.UTC),
                     e.getMessage()
                 );
-                this.dailyAggragationErrorService.save(error);
+                this.dailyAggregationErrorService.save(error);
                 log.error("[{}] [{}] Error processing day. ERROR: {}", deviceId, d, e.getMessage());
             }
         }
@@ -173,6 +174,42 @@ public class AggregationDelegatorService {
             endDate.toString(),
             endDate.toEpochMilli() - startDate.toEpochMilli()
         );
+    }
+
+    public boolean recoveryDailyError(String deviceId, Instant date) {
+        Instant startDate = Instant.now();
+        boolean recovery = false;
+        log.info("[{}] Started recoveryDailyError at " + startDate.toString(), deviceId);
+        Optional<Instant> lastDay = jobStatusService.getLastDayProcessed(deviceId);
+        LocalDate d = LocalDate.ofInstant(date, ZoneId.systemDefault());
+        try {
+            log.info("[{}] Started processing day " + d.toString(), deviceId);
+            trackyEventQueryService.processDay(deviceId, d);
+            log.info("[{}] Finished processing day " + d, deviceId);
+            if (lastDay.isEmpty() || lastDay.get().isBefore(date)) {
+                log.info("[{}] Updated job status " + d, deviceId);
+                jobStatusService.setLastDayProcessed(deviceId, d, null);
+            }
+            DailyAggregationError error = new DailyAggregationError();
+            error.setAggregatedDate(date);
+            error.setDeviceId(deviceId);
+            this.dailyAggregationErrorService.delete(error);
+            recovery = true;
+        } catch (Exception e) {
+            //save error in daily_aggregation_error
+            DailyAggregationError error = new DailyAggregationError(deviceId, d.atStartOfDay().toInstant(ZoneOffset.UTC), e.getMessage());
+            this.dailyAggregationErrorService.save(error);
+            log.error("[{}] [{}] Error processing day. ERROR: {}", deviceId, d, e.getMessage());
+        }
+        Instant endDate = Instant.now();
+        log.info(
+            "[{}] Finished recoveryDailyError at {}, in {}ms",
+            deviceId,
+            endDate.toString(),
+            endDate.toEpochMilli() - startDate.toEpochMilli()
+        );
+
+        return recovery;
     }
 
     public void monthlyProcess(String deviceId) {

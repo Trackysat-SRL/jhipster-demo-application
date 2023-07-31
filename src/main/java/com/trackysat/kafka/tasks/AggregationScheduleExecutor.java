@@ -2,6 +2,7 @@ package com.trackysat.kafka.tasks;
 
 import com.trackysat.kafka.domain.Device;
 import com.trackysat.kafka.service.AggregationDelegatorService;
+import com.trackysat.kafka.service.DailyAggregationErrorService;
 import com.trackysat.kafka.service.DeadLetterQueueService;
 import com.trackysat.kafka.service.DeviceService;
 import java.util.List;
@@ -24,14 +25,18 @@ public class AggregationScheduleExecutor {
 
     private final DeadLetterQueueService deadLetterQueueService;
 
+    private final DailyAggregationErrorService dailyAggregationErrorService;
+
     public AggregationScheduleExecutor(
         AggregationDelegatorService aggregationDelegatorService,
         DeviceService deviceService,
-        DeadLetterQueueService deadLetterQueueService
+        DeadLetterQueueService deadLetterQueueService,
+        DailyAggregationErrorService dailyAggregationErrorService
     ) {
         this.aggregationDelegatorService = aggregationDelegatorService;
         this.deviceService = deviceService;
         this.deadLetterQueueService = deadLetterQueueService;
+        this.dailyAggregationErrorService = dailyAggregationErrorService;
     }
 
     @Scheduled(cron = "0 0 */3 * * *")
@@ -56,5 +61,14 @@ public class AggregationScheduleExecutor {
     @Scheduled(cron = "0 0 */1 * * *")
     public void reprocessDLQ() {
         deadLetterQueueService.reprocess();
+    }
+
+    //@Scheduled(cron = "0 0 4 * * *")
+    public void recoveryAllDailyError() {
+        dailyAggregationErrorService
+            .getAll()
+            .forEach(d -> {
+                aggregationDelegatorService.recoveryDailyError(d.getDeviceId(), d.getAggregatedDate());
+            });
     }
 }

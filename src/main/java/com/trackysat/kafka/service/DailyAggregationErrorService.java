@@ -9,13 +9,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-public class DailyAggragationErrorService {
+public class DailyAggregationErrorService {
 
-    private final Logger log = LoggerFactory.getLogger(DailyAggragationErrorService.class);
+    private final Logger log = LoggerFactory.getLogger(DailyAggregationErrorService.class);
 
     private final DailyAggregationErrorRepository dailyAggregationErrorRepository;
 
-    public DailyAggragationErrorService(DailyAggregationErrorRepository dailyAggregationErrorRepository) {
+    public DailyAggregationErrorService(DailyAggregationErrorRepository dailyAggregationErrorRepository) {
         this.dailyAggregationErrorRepository = dailyAggregationErrorRepository;
     }
 
