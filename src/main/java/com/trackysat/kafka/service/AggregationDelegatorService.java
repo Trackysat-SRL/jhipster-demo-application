@@ -1,6 +1,7 @@
 package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.trackysat.kafka.domain.DailyAggregationError;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.domain.aggregations.SensorValDTO;
@@ -11,7 +12,6 @@ import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -37,18 +37,22 @@ public class AggregationDelegatorService {
 
     private final JobStatusService jobStatusService;
 
+    private final DailyAggragationErrorService dailyAggragationErrorService;
+
     public AggregationDelegatorService(
         TrackyEventQueryService trackyEventQueryService,
         DailyAggregationMapper dailyAggregationMapper,
         DailyAggregationService dailyAggregationService,
         MonthlyAggregationService monthlyAggregationService,
-        JobStatusService jobStatusService
+        JobStatusService jobStatusService,
+        DailyAggragationErrorService dailyAggragationErrorService
     ) {
         this.trackyEventQueryService = trackyEventQueryService;
         this.dailyAggregationMapper = dailyAggregationMapper;
         this.dailyAggregationService = dailyAggregationService;
         this.monthlyAggregationService = monthlyAggregationService;
         this.jobStatusService = jobStatusService;
+        this.dailyAggragationErrorService = dailyAggragationErrorService;
     }
 
     public List<PositionDTO> getPositionsByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo)
@@ -152,11 +156,23 @@ public class AggregationDelegatorService {
                 log.debug("[{}] Finished processing day " + d, deviceId);
                 jobStatusService.setLastDayProcessed(deviceId, d, null);
             } catch (Exception e) {
+                //save error in daily_aggregation_error
+                DailyAggregationError error = new DailyAggregationError(
+                    deviceId,
+                    d.atStartOfDay().toInstant(ZoneOffset.UTC),
+                    e.getMessage()
+                );
+                this.dailyAggragationErrorService.save(error);
                 log.error("[{}] [{}] Error processing day. ERROR: {}", deviceId, d, e.getMessage());
             }
         }
         Instant endDate = Instant.now();
-        log.info("[{}] Finished dailyProcess at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
+        log.info(
+            "[{}] Finished dailyProcess at {}, in {}ms",
+            deviceId,
+            endDate.toString(),
+            endDate.toEpochMilli() - startDate.toEpochMilli()
+        );
     }
 
     public void monthlyProcess(String deviceId) {
@@ -185,7 +201,12 @@ public class AggregationDelegatorService {
             }
         }
         Instant endDate = Instant.now();
-        log.info("[{}] Finished monthlyProcess at {}, in {}ms", deviceId, endDate.toString(), endDate.toEpochMilli() - startDate.toEpochMilli());
+        log.info(
+            "[{}] Finished monthlyProcess at {}, in {}ms",
+            deviceId,
+            endDate.toString(),
+            endDate.toEpochMilli() - startDate.toEpochMilli()
+        );
     }
 
     public List<SensorStatsDTO> getSensorsSummaryByDeviceIdAndDateRange(
