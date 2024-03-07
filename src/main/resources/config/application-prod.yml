@@ -54,7 +54,7 @@ spring:
     cassandra:
       contact-points: cassandra.eu-west-1.amazonaws.com:9142
       compression: LZ4
-      keyspace-name: fleettrack
+      keyspace-name: fleettrack_test
       local-datacenter: eu-west-1
       username: fleettrack-cass-at-461569474594
       password: stHH/ZtwaYDi/issm3j5O17gwr1I+gdMfFfZvVRGvFY=
