@@ -92,7 +92,7 @@ public class CassandraConsumerService {
             .map(Object::toString)
             .distinct()
             .collect(Collectors.joining(""));
-        log.debug("Received VMSON in group {} | partition: {} | lag: {} | offset: {}", TRACKYSAT_GROUP, partition, lag, offset);
+        log.debug("Read VMSON group {} | partition: {} | lag: {} | offset: {}", TRACKYSAT_GROUP, partition, lag, offset);
         partitionsLag.put(partition, lag);
         if (message == null) return;
         try {
@@ -113,7 +113,7 @@ public class CassandraConsumerService {
             TrackyEvent event = trackysatEventMapper.fromVmson(record);
             trackyEventRepository.save(event);
             deviceRepository.save(deviceMapper.fromVmson(record));
-            log.debug("TrackyEvent saved. device: {} date: {}", event.getDeviceId(), event.getCreatedDate());
+            log.debug("Event saved. device: {} date: {}", event.getDeviceId(), event.getCreatedDate());
         }
     }
 
