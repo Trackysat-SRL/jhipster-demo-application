@@ -152,8 +152,8 @@ public class KafkaConsumerConfig {
 
         factory.setConcurrency(CONSUMER_NUMBER);
         factory.setBatchListener(false);
-
-        factory.setRecordFilterStrategy(new CustomRecordFilterStrategy());
+        //coommento chiamata filtro xml,non dovrebbe essere piu' indispensabile in quanto filtrati dal nuovo cluster kafka
+       // factory.setRecordFilterStrategy(new CustomRecordFilterStrategy());
 
         factory.getContainerProperties().setConsumerTaskExecutor(consumerProcessorExecutor());
         //Da decommentare se si vuole stoppare il consumer

@@ -34,8 +34,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class CassandraConsumerService {
 
-    public static final String TRACKYSAT_GROUP = "trackysat";
-    public static final String TRACKYSAT_TOPIC = "a-19";
+    //public static final String TRACKYSAT_GROUP = "trackysat";
+    public static final String TRACKYSAT_GROUP = "prod-trackysat-consumer-group";
+   // public static final String TRACKYSAT_TOPIC = "a-19";
+    public static final String TRACKYSAT_TOPIC = "partner-trackysat";
 
     @Value(value = "${kafka.consumer.number}")
     private final String CONSUMER_NUMBER = "3";
