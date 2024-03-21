@@ -217,7 +217,7 @@ jhipster:
 kafka:
   producer.enabled: false
   consumer.enabled: true
-  bootstrap.server: localhost:9092
+  bootstrap.server: partner-integration-01.telepasskmaster.com:19092,partner-integration-02.telepasskmaster.com:19092,partner-integration-03.telepasskmaster.com:19092
   security.protocol: SASL_PLAINTEXT
   sasl.mechanism: PLAIN
   sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username=trackysat_consumer_01 password=K8jhjf3CmfyTpwasZ27D;

@@ -142,4 +142,4 @@ jhipster:
 
 kafka:
   #bootstrap.server: 'kafka-partner-01.telepasskmaster.com:9092,kafka-partner-02.telepasskmaster.com:9092,kafka-partner-03.telepasskmaster.com:9092'
-  bootstrap.server: 'partner-integration-01.telepasskmaster.com:19092,partner-integration-02.telepasskmaster.com:19092,partner-integration-03.telepasskmaster.com:19092'
+  #bootstrap.server: 'partner-integration-01.telepasskmaster.com:19092,partner-integration-02.telepasskmaster.com:19092,partner-integration-03.telepasskmaster.com:19092'

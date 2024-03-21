@@ -140,4 +140,5 @@ jhipster:
 
 # application:
 kafka:
-  producer.enabled: true
+  #producer.enabled: false
+  #bootstrap.server: 'partner-integration-01.telepasskmaster.com:19092,partner-integration-02.telepasskmaster.com:19092,partner-integration-03.telepasskmaster.com:19092'
