@@ -185,7 +185,7 @@ public class SensorStatsDTO {
         );
     }
 
-    public void recalculate() {
+    public void recalculate(int days) {
         this.setMax(null);
         this.setMin(null);
         this.setDiff(null);
@@ -207,9 +207,15 @@ public class SensorStatsDTO {
                 doubleList.stream().max(Comparator.naturalOrder()).ifPresent(this::setMax);
                 doubleList.stream().min(Comparator.naturalOrder()).ifPresent(this::setMin);
                 this.setDiff(Optional.ofNullable(this.getMax()).orElse(0.0) - Optional.ofNullable(this.getMin()).orElse(0.0));
-                this.setAvg(doubleList.stream().reduce(0.0, Double::sum) / doubleList.size());
+
                 this.setSum(doubleList.stream().reduce(0.0, Double::sum));
-                this.setCount(Collections.singletonMap("total", (long) doubleList.size()));
+                if (days >= 0) {
+                    this.setCount(Collections.singletonMap("total", (long) days));
+                    this.setAvg(doubleList.stream().reduce(0.0, Double::sum) / days);
+                } else {
+                    this.setCount(Collections.singletonMap("total", (long) doubleList.size()));
+                    this.setAvg(doubleList.stream().reduce(0.0, Double::sum) / doubleList.size());
+                }
             } catch (Exception e) {
                 log.error("Cannot parse double form values. {}", this);
             }

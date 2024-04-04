@@ -1,6 +1,7 @@
 package com.trackysat.kafka.web.rest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.trackysat.kafka.config.Constants;
 import com.trackysat.kafka.domain.Device;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
@@ -8,7 +9,10 @@ import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.DeviceService;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.web.rest.dto.BulkDeviceRequestDTO;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -289,6 +293,106 @@ public class DeviceResource {
             summary.forEach(s -> s.setValues(null));
         }
         return ResponseEntity.ok().body(summary);
+    }
+
+    @GetMapping("/sensorsTotalVehicleDistance/{unitMisure}")
+    public ResponseEntity<Map<String, List<SensorStatsDTO>>> getSensorTotalVehicleDistance(
+        @PathVariable String unitMisure,
+        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
+        @RequestParam(value = "values", required = false, defaultValue = "true") Boolean includeValues,
+        @Valid @RequestBody BulkDeviceRequestDTO devicesIds
+    ) {
+        log.debug("REST request to getSensorTotalVehicleDistance: {}, {}, {}, {}", devicesIds.getDevices(), from, to, includeValues);
+        Instant fromDate = Instant.parse(from);
+        Instant toDate = Instant.parse(to);
+        Duration duration = Duration.between(fromDate, toDate);
+        long days = duration.toDays();
+        Map<String, List<SensorStatsDTO>> allDevicesSensors = devicesIds
+            .getDevices()
+            .stream()
+            .distinct()
+            .collect(Collectors.toList())
+            .parallelStream()
+            .collect(
+                Collectors.toMap(
+                    Function.identity(),
+                    id -> {
+                        try {
+                            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(
+                                id,
+                                fromDate,
+                                toDate
+                            );
+                            List<SensorStatsDTO> stats = sensors
+                                .entrySet()
+                                .stream()
+                                .filter(e ->
+                                    e.getKey().toLowerCase().contains(Constants.SENSOR_TOT_VEHICLE_DIST.toLowerCase()) &&
+                                    unitMisure.toLowerCase().equals(e.getValue().getMeasureUnit())
+                                )
+                                .map(Map.Entry::getValue)
+                                .collect(Collectors.toList());
+
+                            if (!includeValues) {
+                                stats.forEach(s -> s.setValues(null));
+                            }
+                            return stats;
+                        } catch (JsonProcessingException e) {
+                            return Collections.emptyList();
+                        }
+                    }
+                )
+            );
+        return ResponseEntity.ok().body(allDevicesSensors);
+    }
+
+    @GetMapping("/sensorsTotalFuel")
+    public ResponseEntity<Map<String, List<SensorStatsDTO>>> getSensorTotalFuel(
+        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
+        @RequestParam(value = "values", required = false, defaultValue = "true") Boolean includeValues,
+        @Valid @RequestBody BulkDeviceRequestDTO devicesIds
+    ) {
+        log.debug("REST request to sensorsTotalFuel: {}, {}, {}, {}", devicesIds.getDevices(), from, to, includeValues);
+        Instant fromDate = Instant.parse(from);
+        Instant toDate = Instant.parse(to);
+        Duration duration = Duration.between(fromDate, toDate);
+        long days = duration.toDays();
+        Map<String, List<SensorStatsDTO>> allDevicesSensors = devicesIds
+            .getDevices()
+            .stream()
+            .distinct()
+            .collect(Collectors.toList())
+            .parallelStream()
+            .collect(
+                Collectors.toMap(
+                    Function.identity(),
+                    id -> {
+                        try {
+                            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(
+                                id,
+                                fromDate,
+                                toDate
+                            );
+                            List<SensorStatsDTO> stats = sensors
+                                .entrySet()
+                                .stream()
+                                .filter(e -> e.getKey().toLowerCase().contains(Constants.SENSOR_TOT_FUEL.toLowerCase()))
+                                .map(Map.Entry::getValue)
+                                .collect(Collectors.toList());
+
+                            if (!includeValues) {
+                                stats.forEach(s -> s.setValues(null));
+                            }
+                            return stats;
+                        } catch (JsonProcessingException e) {
+                            return Collections.emptyList();
+                        }
+                    }
+                )
+            );
+        return ResponseEntity.ok().body(allDevicesSensors);
     }
     /*    @GetMapping("/summaryAllDevices/sensors/{sensor}")
     public ResponseEntity<List<SensorStatsDTO>> summaryAllDevices(

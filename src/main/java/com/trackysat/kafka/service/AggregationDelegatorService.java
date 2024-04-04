@@ -9,10 +9,7 @@ import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.service.mapper.DailyAggregationMapper;
 import com.trackysat.kafka.utils.DateUtils;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -101,11 +98,17 @@ public class AggregationDelegatorService {
                 .collect(Collectors.toList());
         } */else {
             log.info("[{}] Using monthly aggregation data", deviceId);
-            return monthlyAggregationService.getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo);
+            return monthlyAggregationService
+                .getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo)
+                .stream()
+                .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
+                .collect(Collectors.toList());
         }
     }
 
     private DailyAggregationDTO filterHoursInDailyAggregation(DailyAggregationDTO dailyAggregationDTO, Instant dateFrom, Instant dateTo) {
+        Duration duration = Duration.between(dateFrom, dateTo);
+        long days = duration.toDays();
         List<PositionDTO> filteredPositions = dailyAggregationDTO
             .getPositions()
             .stream()
@@ -120,7 +123,8 @@ public class AggregationDelegatorService {
                 .filter(v -> v.getCreationDate().isAfter(dateFrom) && v.getCreationDate().isBefore(dateTo))
                 .collect(Collectors.toList());
             sensor.getValue().setValues(filteredValues);
-            sensor.getValue().recalculate();
+            sensor.getValue().recalculate((int) days); // passo la differenza tra i giorni in modo che il metodo utilizzi per i calcoli i giorni corretti e non solo
+            // i giorni dei valori trovati
         }
         return dailyAggregationDTO;
     }
@@ -291,7 +295,7 @@ public class AggregationDelegatorService {
                 .findFirst()
                 .ifPresent(s -> {
                     s.setValues(filteredValues);
-                    s.recalculate();
+                    s.recalculate(-1); //passo un valore negativo in modo che il metodo utilizzi solo il count dei valori trovati
                     String key = String.format("%s_%s_%s_%s_%s", s.getSource(), s.getName(), s.getMeasureUnit(), s.getType(), s.getSid());
                     List<SensorStatsDTO> val = mapOfSensors.containsKey(key) ? mapOfSensors.get(key) : new ArrayList<>();
                     val.add(s);
