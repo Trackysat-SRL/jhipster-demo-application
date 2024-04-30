@@ -295,7 +295,7 @@ public class DeviceResource {
         return ResponseEntity.ok().body(summary);
     }
 
-    @GetMapping("/sensorsTotalVehicleDistance/{unitMisure}")
+    @PostMapping("/sensorsTotalVehicleDistance/{unitMisure}")
     public ResponseEntity<Map<String, List<SensorStatsDTO>>> getSensorTotalVehicleDistance(
         @PathVariable String unitMisure,
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
@@ -347,7 +347,7 @@ public class DeviceResource {
         return ResponseEntity.ok().body(allDevicesSensors);
     }
 
-    @GetMapping("/sensorsTotalFuel")
+    @PostMapping("/sensorsTotalFuel")
     public ResponseEntity<Map<String, List<SensorStatsDTO>>> getSensorTotalFuel(
         @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to,
