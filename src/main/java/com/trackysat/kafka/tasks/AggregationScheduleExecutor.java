@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +28,9 @@ public class AggregationScheduleExecutor {
 
     private final DailyAggregationErrorService dailyAggregationErrorService;
 
+    @Value(value = "${kafka.aggregation.enabled}")
+    private boolean enabled;
+
     public AggregationScheduleExecutor(
         AggregationDelegatorService aggregationDelegatorService,
         DeviceService deviceService,
@@ -41,34 +45,42 @@ public class AggregationScheduleExecutor {
 
     @Scheduled(cron = "0 0 */3 * * *")
     public void processAllDevicesDaily() {
-        AtomicInteger totDevice = new AtomicInteger(1);
-        List<Device> listDev = deviceService
-            .getAll()
-            .stream()
-            .filter(d -> Objects.nonNull(d.getCompanyname()) && d.getCompanyname().equals("CGT"))
-            .collect(Collectors.toList());
-        listDev.forEach(d -> {
-            aggregationDelegatorService.dailyProcess(d.getUid());
-            log.info("[{}] Elaborated {} of {}", d.getUid(), totDevice.getAndIncrement(), listDev.size());
-        });
+        if (enabled) {
+            AtomicInteger totDevice = new AtomicInteger(1);
+            List<Device> listDev = deviceService
+                .getAll()
+                .stream()
+                .filter(d -> Objects.nonNull(d.getCompanyname()) && d.getCompanyname().equals("CGT"))
+                .collect(Collectors.toList());
+            listDev.forEach(d -> {
+                aggregationDelegatorService.dailyProcess(d.getUid());
+                log.info("[{}] Elaborated {} of {}", d.getUid(), totDevice.getAndIncrement(), listDev.size());
+            });
+        }
     }
 
     @Scheduled(cron = "0 0 1 * * *")
     public void processAllDevicesMonthly() {
-        deviceService.getAll().stream().map(Device::getUid).forEach(aggregationDelegatorService::monthlyProcess);
+        if (enabled) {
+            deviceService.getAll().stream().map(Device::getUid).forEach(aggregationDelegatorService::monthlyProcess);
+        }
     }
 
     @Scheduled(cron = "0 0 */1 * * *")
     public void reprocessDLQ() {
-        deadLetterQueueService.reprocess();
+        if (enabled) {
+            deadLetterQueueService.reprocess();
+        }
     }
 
-    //@Scheduled(cron = "0 0 4 * * *")
+    @Scheduled(cron = "0 0 4 * * *")
     public void recoveryAllDailyError() {
-        dailyAggregationErrorService
-            .getAll()
-            .forEach(d -> {
-                aggregationDelegatorService.recoveryDailyError(d.getDeviceId(), d.getAggregatedDate());
-            });
+        if (enabled) {
+            dailyAggregationErrorService
+                .getAll()
+                .forEach(d -> {
+                    aggregationDelegatorService.recoveryDailyError(d.getDeviceId(), d.getAggregatedDate());
+                });
+        }
     }
 }

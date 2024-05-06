@@ -216,7 +216,8 @@ jhipster:
 
 kafka:
   producer.enabled: false
-  consumer.enabled: true
+  consumer.enabled: false
+  aggregation.enabled: false
   bootstrap.server: partner-integration-01.telepasskmaster.com:19092,partner-integration-02.telepasskmaster.com:19092,partner-integration-03.telepasskmaster.com:19092
   security.protocol: SASL_PLAINTEXT
   sasl.mechanism: PLAIN

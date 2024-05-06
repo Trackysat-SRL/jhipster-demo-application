@@ -98,8 +98,9 @@ public class AggregationDelegatorService {
                 .collect(Collectors.toList());
         } */else {
             log.info("[{}] Using monthly aggregation data", deviceId);
+            Instant dayStartMonth = DateUtils.atStartOfMonth(dateFrom);
             return monthlyAggregationService
-                .getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dateFrom), dateTo)
+                .getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dayStartMonth), dateTo)
                 .stream()
                 .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
                 .collect(Collectors.toList());

@@ -177,10 +177,11 @@ public class MonthlyAggregationService {
         if (sensorStatsDTO.getName().equals(nameSensor) && sensorStatsDTO.getValues().size() >= 1) {
             SensorValDTO firsValue = sensorStatsDTO.getValues().get(0);
             SensorValDTO lastValue = sensorStatsDTO.getValues().get(sensorStatsDTO.getValues().size() - 1);
-
+            //TODO per il sensore total fuel capire come effettuare il calcolo perchè in alcuni giorni il valore last e minore del valore first.
             if (Objects.nonNull(lastValue)) {
                 SensorValDTO diffValue = new SensorValDTO();
                 double diff = Double.parseDouble(lastValue.getValue()) - Double.parseDouble(firsValue.getValue());
+                diff = diff < 0 ? 0.0 : diff;
                 diffValue.setValue(Double.toString(diff));
                 diffValue.setCreationDate(lastValue.getCreationDate());
                 if (Objects.isNull(sensorStatsDTO.getLastDailyValues())) {

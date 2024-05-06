@@ -27,7 +27,7 @@ public class KafkaConsumerConfig {
     private final Logger log = LoggerFactory.getLogger(KafkaConsumerConfig.class);
 
     @Value(value = "${kafka.consumer.enabled}")
-    private String CONSUMER_ENABLED;
+    private boolean CONSUMER_ENABLED;
 
     @Value(value = "${kafka.bootstrap.server}")
     private List<String> BOOTSTRAP_SERVER;
@@ -153,11 +153,11 @@ public class KafkaConsumerConfig {
         factory.setConcurrency(CONSUMER_NUMBER);
         factory.setBatchListener(false);
         //coommento chiamata filtro xml,non dovrebbe essere piu' indispensabile in quanto filtrati dal nuovo cluster kafka
-       // factory.setRecordFilterStrategy(new CustomRecordFilterStrategy());
+        // factory.setRecordFilterStrategy(new CustomRecordFilterStrategy());
 
         factory.getContainerProperties().setConsumerTaskExecutor(consumerProcessorExecutor());
         //Da decommentare se si vuole stoppare il consumer
-        //factory.setAutoStartup(false);
+        if (!CONSUMER_ENABLED) factory.setAutoStartup(false);
         return factory;
     }
 
