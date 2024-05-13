@@ -77,4 +77,9 @@ public class TrackyEventQueryService {
         log.info("[{}] [{}] Events found: " + events.size(), deviceId, month.getMonth());
         monthlyAggregationService.process(deviceId, startOfFirstDay, events);
     }
+
+    public void deleteEventByDate(String deviceId, Instant startDay, Instant endDay) {
+        log.debug("[{}] delete device in range of date " + startDay + " - " + endDay, deviceId);
+        trackyEventRepository.deleteEventByDate(deviceId, startDay, endDay);
+    }
 }

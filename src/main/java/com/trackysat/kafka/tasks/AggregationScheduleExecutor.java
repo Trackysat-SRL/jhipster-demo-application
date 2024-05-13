@@ -1,10 +1,8 @@
 package com.trackysat.kafka.tasks;
 
 import com.trackysat.kafka.domain.Device;
-import com.trackysat.kafka.service.AggregationDelegatorService;
-import com.trackysat.kafka.service.DailyAggregationErrorService;
-import com.trackysat.kafka.service.DeadLetterQueueService;
-import com.trackysat.kafka.service.DeviceService;
+import com.trackysat.kafka.service.*;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,6 +26,8 @@ public class AggregationScheduleExecutor {
 
     private final DailyAggregationErrorService dailyAggregationErrorService;
 
+    private final TrackyEventQueryService trackyEventQueryService;
+
     @Value(value = "${kafka.aggregation.enabled}")
     private boolean enabled;
 
@@ -35,12 +35,14 @@ public class AggregationScheduleExecutor {
         AggregationDelegatorService aggregationDelegatorService,
         DeviceService deviceService,
         DeadLetterQueueService deadLetterQueueService,
-        DailyAggregationErrorService dailyAggregationErrorService
+        DailyAggregationErrorService dailyAggregationErrorService,
+        TrackyEventQueryService trackyEventQueryService
     ) {
         this.aggregationDelegatorService = aggregationDelegatorService;
         this.deviceService = deviceService;
         this.deadLetterQueueService = deadLetterQueueService;
         this.dailyAggregationErrorService = dailyAggregationErrorService;
+        this.trackyEventQueryService = trackyEventQueryService;
     }
 
     @Scheduled(cron = "0 0 */3 * * *")
@@ -82,5 +84,26 @@ public class AggregationScheduleExecutor {
                     aggregationDelegatorService.recoveryDailyError(d.getDeviceId(), d.getAggregatedDate());
                 });
         }
+    }
+
+    //@Scheduled(cron = "0 53 14 * * *")
+    public void deleteEventByDate() {
+        if (enabled) {
+            log.info("Start deleteEventByDate");
+            List<Device> listDev = deviceService.getAll();
+            log.info("Total device {}", listDev.size());
+            AtomicInteger count = new AtomicInteger(0);
+            listDev.forEach(d -> {
+                trackyEventQueryService.deleteEventByDate(
+                    d.getUid(),
+                    Instant.parse("2023-03-15T00:00:00Z"),
+                    Instant.parse("2023-04-01T00:00:00Z")
+                );
+                count.getAndIncrement();
+                int toElab = listDev.size() - count.get();
+                log.info("Tot device da elab {}", toElab);
+            });
+        }
+        log.info("End deleteEventByDate");
     }
 }

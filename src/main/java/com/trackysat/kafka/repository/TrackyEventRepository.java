@@ -82,6 +82,20 @@ public class TrackyEventRepository {
         return listrow.stream().map(this::fromRow).collect(Collectors.toList());
     }
 
+    public void deleteEventByDate(String deviceId, Instant dateFrom, Instant dateTo) {
+        log.info("Start deleteEventByDate device_id " + deviceId + " from_date " + dateFrom + " to_date " + dateTo);
+        BoundStatement stmt = findAllByDeviceIdAndDates
+            .bind()
+            .setString("device_id", deviceId)
+            .setInstant("from_date", dateFrom)
+            .setInstant("to_date", dateTo);
+        ResultSet rs = session.execute(stmt);
+        List<Row> listrow = rs.all();
+        List<TrackyEvent> trackyEventList = listrow.stream().map(this::fromRow).collect(Collectors.toList());
+        trackyEventList.forEach(this::delete);
+        log.info("End deleteEventByDate device_id " + deviceId + " from_date " + dateFrom + " to_date " + dateTo);
+    }
+
     // -- CRUD -- //
 
     public Optional<TrackyEvent> findById(String id, Instant date) {
