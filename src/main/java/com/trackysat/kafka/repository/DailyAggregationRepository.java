@@ -39,6 +39,8 @@ public class DailyAggregationRepository {
 
     private final PreparedStatement findAllByDeviceIdAndDates;
 
+    private final PreparedStatement findAllByDeviceIdAndSingleDay;
+
     public DailyAggregationRepository(CqlSession session, Validator validator, CassandraProperties cassandraProperties) {
         this.session = session;
         this.validator = validator;
@@ -52,6 +54,8 @@ public class DailyAggregationRepository {
                 "SELECT * FROM daily_aggregation " +
                 "WHERE device_id = :device_id and aggregated_date >= :from_date and aggregated_date < :to_date"
             );
+        findAllByDeviceIdAndSingleDay =
+            session.prepare("SELECT * FROM daily_aggregation " + "WHERE device_id = :device_id and aggregated_date = :from_date");
     }
 
     public List<DailyAggregation> findOneByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
@@ -61,6 +65,12 @@ public class DailyAggregationRepository {
             .setInstant("from_date", dateFrom)
             .setInstant("to_date", dateTo);
         ResultSet rs = session.execute(stmt.setConsistencyLevel(ConsistencyLevel.LOCAL_ONE));
+        return rs.all().stream().map(this::fromRow).collect(Collectors.toList());
+    }
+
+    public List<DailyAggregation> findOneByDeviceIdAndSingleDay(String deviceId, Instant dateFrom) {
+        BoundStatement stmt = findAllByDeviceIdAndSingleDay.bind().setString("device_id", deviceId).setInstant("from_date", dateFrom);
+        ResultSet rs = session.execute(stmt);
         return rs.all().stream().map(this::fromRow).collect(Collectors.toList());
     }
 

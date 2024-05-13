@@ -181,4 +181,13 @@ public class DailyAggregationService {
             .map(dailyAggregationMapper::toDTO)
             .collect(Collectors.toList());
     }
+
+    public List<DailyAggregationDTO> getByDeviceIdAndSingleDay(String deviceId, Instant dateFrom) {
+        log.debug("Getting DailyAggregations by device {} and day {} ", deviceId, dateFrom);
+        return dailyAggregationRepository
+            .findOneByDeviceIdAndSingleDay(deviceId, DateUtils.atStartOfDate(dateFrom))
+            .stream()
+            .map(dailyAggregationMapper::toDTO)
+            .collect(Collectors.toList());
+    }
 }

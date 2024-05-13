@@ -107,6 +107,42 @@ public class AggregationDelegatorService {
         }
     }
 
+    /**
+     *
+     * @param deviceId
+     * @param dateFrom
+     * @param dateTo
+     * @return
+     * @throws JsonProcessingException
+     */
+    //Servizio che va ad interrogare solo la tabella dailyAggregation
+    public Map<String, SensorStatsDTO> getSensorsByDeviceIdAndSingleDay(String deviceId, Instant dateFrom, Instant dateTo)
+        throws JsonProcessingException {
+        return getByDeviceIdFromDailyAggr(deviceId, dateFrom, dateTo)
+            .stream()
+            .map(DailyAggregationDTO::getSensors)
+            .map(Map::entrySet)
+            .flatMap(Set::stream)
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, dailyAggregationService::mergeSensorMaps));
+    }
+
+    /**
+     *
+     * @param deviceId
+     * @param dateFrom
+     * @param dateTo
+     * @return List<DailyAggregationDTO>
+     * @throws JsonProcessingException
+     */
+    public List<DailyAggregationDTO> getByDeviceIdFromDailyAggr(String deviceId, Instant dateFrom, Instant dateTo)
+        throws JsonProcessingException {
+        return dailyAggregationService
+            .getByDeviceIdAndSingleDay(deviceId, dateFrom)
+            .stream()
+            .map(da -> filterHoursInDailyAggregation(da, dateFrom, dateTo))
+            .collect(Collectors.toList());
+    }
+
     private DailyAggregationDTO filterHoursInDailyAggregation(DailyAggregationDTO dailyAggregationDTO, Instant dateFrom, Instant dateTo) {
         Duration duration = Duration.between(dateFrom, dateTo);
         long days = duration.toDays();
@@ -140,6 +176,19 @@ public class AggregationDelegatorService {
 
     public Optional<DailyAggregationDTO> getOne() {
         return dailyAggregationService.getOne().map(dailyAggregationMapper::toDTO);
+    }
+
+    public Map<String, SensorStatsDTO> getLastValueSensorsByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo)
+        throws JsonProcessingException {
+        log.info("[{}] getLastValueSensorsByDeviceIdAndDateRange {} {}", deviceId, dateFrom, dateTo);
+        Instant dayStartMonth = DateUtils.atStartOfMonth(dateFrom);
+        return monthlyAggregationService
+            .getByDeviceIdAndDateRange(deviceId, DateUtils.atStartOfDate(dayStartMonth), dateTo)
+            .stream()
+            .map(DailyAggregationDTO::getSensors)
+            .map(Map::entrySet)
+            .flatMap(Set::stream)
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, dailyAggregationService::mergeSensorMaps));
     }
 
     // == PROCESS ==

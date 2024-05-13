@@ -394,6 +394,59 @@ public class DeviceResource {
             );
         return ResponseEntity.ok().body(allDevicesSensors);
     }
+
+    @PostMapping("/serviceDistance")
+    public ResponseEntity<Map<String, List<SensorStatsDTO>>> getServiceDistance(
+        @RequestParam("day") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String day,
+        @RequestParam(value = "values", required = false, defaultValue = "false") Boolean includeValues,
+        @Valid @RequestBody BulkDeviceRequestDTO devicesIds
+    ) {
+        log.debug("REST request to getServiceDistance: {}, {}, {}", devicesIds.getDevices(), day, includeValues);
+
+        Instant fromDate = Instant.parse(day);
+        Instant toDate = fromDate.plus(1, ChronoUnit.DAYS);
+
+        Map<String, List<SensorStatsDTO>> allDevicesSensors = devicesIds
+            .getDevices()
+            .stream()
+            .distinct()
+            .collect(Collectors.toList())
+            .parallelStream()
+            .collect(
+                Collectors.toMap(
+                    Function.identity(),
+                    id -> {
+                        try {
+                            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getLastValueSensorsByDeviceIdAndDateRange(
+                                id,
+                                fromDate,
+                                toDate
+                            );
+                            List<SensorStatsDTO> stats = sensors
+                                .entrySet()
+                                .stream()
+                                .filter(e -> e.getKey().toLowerCase().contains(Constants.SENSOR_SERVICE_DISTANCE.toLowerCase()))
+                                .map(Map.Entry::getValue)
+                                .filter(v ->
+                                    Objects.nonNull(v.getLastValue()) &&
+                                    Objects.nonNull(v.getLastValue().getValue()) &&
+                                    Double.parseDouble(v.getLastValue().getValue()) < 160000.0 &&
+                                    Double.parseDouble(v.getLastValue().getValue()) > -160000.0
+                                )
+                                .collect(Collectors.toList());
+
+                            if (!includeValues) {
+                                stats.forEach(s -> s.setValues(null));
+                            }
+                            return stats;
+                        } catch (JsonProcessingException e) {
+                            return Collections.emptyList();
+                        }
+                    }
+                )
+            );
+        return ResponseEntity.ok().body(allDevicesSensors);
+    }
     /*    @GetMapping("/summaryAllDevices/sensors/{sensor}")
     public ResponseEntity<List<SensorStatsDTO>> summaryAllDevices(
         @PathVariable String sensor,

@@ -14,5 +14,7 @@ public final class Constants {
     public static final String SENSOR_TIME_ENGINE_LIFE = "TimeEngineLife";
     public static final String SENSOR_TOT_FUEL = "TotalFuel";
 
+    public static final String SENSOR_SERVICE_DISTANCE = "ServiceDistance";
+
     private Constants() {}
 }
