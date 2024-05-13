@@ -7,7 +7,7 @@
 
     <groupId>com.trackysat.kafka</groupId>
     <artifactId>trackycontrol</artifactId>
-    <version>1.0.6</version>
+    <version>1.0.7</version>
     <packaging>war</packaging>
     <name>TrackyControl Kafka J Hipster</name>
     <description>Description for TrackyControl</description>
