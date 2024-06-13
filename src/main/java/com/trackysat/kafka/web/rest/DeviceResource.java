@@ -9,6 +9,7 @@ import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.DeviceService;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.web.rest.dto.BulkDeviceRequestDTO;
+import com.trackysat.kafka.web.rest.dto.DeviceTimeZoneDTO;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -16,9 +17,11 @@ import java.time.temporal.TemporalUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -66,6 +69,20 @@ public class DeviceResource {
     public ResponseEntity<Device> getOne(@PathVariable String id) {
         log.debug("REST request to get a page of Device by deviceId: {}", id);
         return ResponseUtil.wrapOrNotFound(deviceService.getOne(id));
+    }
+
+    @PutMapping
+    public ResponseEntity updateDevice(@RequestBody DeviceTimeZoneDTO deviceTimeZoneDTO) {
+        log.debug("REST request to put device zone");
+
+        for (String key : deviceTimeZoneDTO.getDeviceZoneMap().keySet()) {
+            Optional<Device> deviceToUpdated = deviceService.getOne(key);
+            deviceToUpdated.ifPresent(device -> {
+                device.setTimezone(deviceTimeZoneDTO.getDeviceZoneMap().get(key));
+                deviceService.updateDevice(device);
+            });
+        }
+        return ResponseEntity.ok().body(null);
     }
 
     @GetMapping("/{id}/data")

@@ -69,6 +69,12 @@ public class DeviceRepository {
         batch.addStatement(deviceDao.deleteQuery(device));
         session.execute(batch.build());
     }
+
+    public void update(Device device) {
+        BatchStatementBuilder batch = BatchStatement.builder(DefaultBatchType.UNLOGGED);
+        batch.addStatement(deviceDao.updateQuery(device));
+        session.execute(batch.build());
+    }
 }
 
 @Dao
@@ -84,6 +90,9 @@ interface DeviceDao {
 
     @Delete
     BoundStatement deleteQuery(Device device);
+
+    @Update
+    BoundStatement updateQuery(Device device);
 }
 
 @Mapper

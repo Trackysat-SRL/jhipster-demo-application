@@ -29,4 +29,8 @@ public class DeviceService {
     public List<Device> getAll() {
         return deviceRepository.findAll();
     }
+
+    public void updateDevice(Device device) {
+        deviceRepository.update(device);
+    }
 }

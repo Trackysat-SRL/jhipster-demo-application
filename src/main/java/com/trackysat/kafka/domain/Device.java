@@ -29,6 +29,8 @@ public class Device implements Serializable {
 
     String companyname;
 
+    String timezone;
+
     public String getUid() {
         return uid;
     }
@@ -77,6 +79,14 @@ public class Device implements Serializable {
         this.companyname = companyname;
     }
 
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -101,6 +111,7 @@ public class Device implements Serializable {
             ", ver='" + ver + '\'' +
             ", typ='" + typ + '\'' +
             ", companyname='" + companyname + '\'' +
+            ", timezone='" + timezone + '\'' +
             '}';
     }
 }
