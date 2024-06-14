@@ -72,17 +72,18 @@ public class DeviceResource {
     }
 
     @PutMapping
-    public ResponseEntity updateDevice(@RequestBody DeviceTimeZoneDTO deviceTimeZoneDTO) {
+    public ResponseEntity<List<String>> updateDevice(@RequestBody DeviceTimeZoneDTO deviceTimeZoneDTO) {
         log.debug("REST request to put device zone");
-
+        List<String> deviceUpdated = new ArrayList<>();
         for (String key : deviceTimeZoneDTO.getDeviceZoneMap().keySet()) {
             Optional<Device> deviceToUpdated = deviceService.getOne(key);
             deviceToUpdated.ifPresent(device -> {
                 device.setTimezone(deviceTimeZoneDTO.getDeviceZoneMap().get(key));
                 deviceService.updateDevice(device);
+                deviceUpdated.add(device.getUid());
             });
         }
-        return ResponseEntity.ok().body(null);
+        return ResponseEntity.ok().body(deviceUpdated);
     }
 
     @GetMapping("/{id}/data")
