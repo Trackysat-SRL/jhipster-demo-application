@@ -1,9 +1,12 @@
 package com.trackysat.kafka.web.rest;
 
+import com.trackysat.kafka.domain.Device;
 import com.trackysat.kafka.domain.JobStatus;
 import com.trackysat.kafka.service.AggregationDelegatorService;
+import com.trackysat.kafka.service.DeviceService;
 import com.trackysat.kafka.service.JobStatusService;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,9 +33,16 @@ public class JobStatusResource {
 
     private final AggregationDelegatorService aggregationDelegatorService;
 
-    public JobStatusResource(JobStatusService jobStatusService, AggregationDelegatorService aggregationDelegatorService) {
+    private final DeviceService deviceService;
+
+    public JobStatusResource(
+        JobStatusService jobStatusService,
+        AggregationDelegatorService aggregationDelegatorService,
+        DeviceService deviceService
+    ) {
         this.jobStatusService = jobStatusService;
         this.aggregationDelegatorService = aggregationDelegatorService;
+        this.deviceService = deviceService;
     }
 
     @GetMapping("/jobs")
@@ -59,8 +69,10 @@ public class JobStatusResource {
         log.debug("REST request to delete JobStatus by id: {}", id);
         boolean reprocess = jobStatusService.deleteOne(id);
         if (reprocess) {
+            Optional<Device> device = deviceService.getOne(id);
+            String timezone = device.isPresent() ? device.get().getTimezone() : "UTC";
             if (id.contains("daily")) {
-                aggregationDelegatorService.dailyProcess(jobStatusService.getDeviceId(id));
+                aggregationDelegatorService.dailyProcess(jobStatusService.getDeviceId(id), timezone);
             } else if (id.contains("monthly")) {
                 aggregationDelegatorService.monthlyProcess(jobStatusService.getDeviceId(id));
             }

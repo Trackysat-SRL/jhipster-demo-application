@@ -55,7 +55,7 @@ public class AggregationScheduleExecutor {
                 .filter(d -> Objects.nonNull(d.getCompanyname()) && d.getCompanyname().equals("CGT"))
                 .collect(Collectors.toList());
             listDev.forEach(d -> {
-                aggregationDelegatorService.dailyProcess(d.getUid());
+                aggregationDelegatorService.dailyProcess(d.getUid(), d.getTimezone());
                 log.info("[{}] Elaborated {} of {}", d.getUid(), totDevice.getAndIncrement(), listDev.size());
             });
         }

@@ -10,6 +10,7 @@ import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.DateUtils;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -60,13 +61,17 @@ public class TrackyEventQueryService {
             .collect(Collectors.toList());
     }
 
-    public void processDay(String deviceId, LocalDate day) throws JsonProcessingException {
+    public void processDay(String deviceId, LocalDate day, String timezone) throws JsonProcessingException {
         log.info("[{}] [{}] Start processing day", deviceId, day);
-        Instant startOfDay = day.atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant endOfDay = day.atStartOfDay().toInstant(ZoneOffset.UTC).plus(1, ChronoUnit.DAYS);
+        //Per recuperare i dati da aggregare si prende il timezone del device;
+        ZoneId zone = ZoneId.of(timezone);
+        ZoneOffset zoneOffSet = zone.getRules().getOffset(day.atStartOfDay());
+        Instant startOfDay = day.atStartOfDay().toInstant(zoneOffSet);
+        Instant endOfDay = day.atStartOfDay().toInstant(zoneOffSet).plus(1, ChronoUnit.DAYS);
+        Instant dayAggregation = day.atStartOfDay().toInstant(ZoneOffset.UTC);
         List<TrackyEvent> events = trackyEventRepository.findOneByDeviceIdAndDateRange(deviceId, startOfDay, endOfDay);
         log.info("[{}] [{}] Events found: " + events.size(), deviceId, day);
-        dailyAggregationService.process(deviceId, startOfDay, events);
+        dailyAggregationService.process(deviceId, dayAggregation, events);
         log.info("[{}] [{}] Finished processing day", deviceId, day);
     }
 

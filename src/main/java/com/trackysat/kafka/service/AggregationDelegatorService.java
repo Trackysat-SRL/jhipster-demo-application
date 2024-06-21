@@ -2,6 +2,7 @@ package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.DailyAggregationError;
+import com.trackysat.kafka.domain.Device;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.domain.aggregations.SensorValDTO;
@@ -37,13 +38,16 @@ public class AggregationDelegatorService {
 
     private final DailyAggregationErrorService dailyAggregationErrorService;
 
+    private final DeviceService deviceService;
+
     public AggregationDelegatorService(
         TrackyEventQueryService trackyEventQueryService,
         DailyAggregationMapper dailyAggregationMapper,
         DailyAggregationService dailyAggregationService,
         MonthlyAggregationService monthlyAggregationService,
         JobStatusService jobStatusService,
-        DailyAggregationErrorService dailyAggregationErrorService
+        DailyAggregationErrorService dailyAggregationErrorService,
+        DeviceService deviceService
     ) {
         this.trackyEventQueryService = trackyEventQueryService;
         this.dailyAggregationMapper = dailyAggregationMapper;
@@ -51,6 +55,7 @@ public class AggregationDelegatorService {
         this.monthlyAggregationService = monthlyAggregationService;
         this.jobStatusService = jobStatusService;
         this.dailyAggregationErrorService = dailyAggregationErrorService;
+        this.deviceService = deviceService;
     }
 
     public List<PositionDTO> getPositionsByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo)
@@ -193,9 +198,10 @@ public class AggregationDelegatorService {
 
     // == PROCESS ==
 
-    public void dailyProcess(String deviceId) {
+    public void dailyProcess(String deviceId, String timezone) {
         Instant startDate = Instant.now();
         log.info("[{}] Started dailyProcess at " + startDate.toString(), deviceId);
+
         Optional<Instant> lastDay = jobStatusService.getLastDayProcessed(deviceId);
         if (lastDay.isEmpty()) {
             log.debug("[{}] Last day was not present, set to yesterday", deviceId);
@@ -207,7 +213,7 @@ public class AggregationDelegatorService {
         for (LocalDate d : days) {
             try {
                 log.debug("[{}] Started processing day " + d.toString(), deviceId);
-                trackyEventQueryService.processDay(deviceId, d);
+                trackyEventQueryService.processDay(deviceId, d, Objects.isNull(timezone) || timezone.isEmpty() ? "UTC" : timezone);
                 log.debug("[{}] Finished processing day " + d, deviceId);
                 jobStatusService.setLastDayProcessed(deviceId, d, null);
             } catch (Exception e) {
@@ -236,9 +242,11 @@ public class AggregationDelegatorService {
         log.info("[{}] Started recoveryDailyError at " + startDate.toString(), deviceId);
         Optional<Instant> lastDay = jobStatusService.getLastDayProcessed(deviceId);
         LocalDate d = LocalDate.ofInstant(date, ZoneId.systemDefault());
+        Optional<Device> device = deviceService.getOne(deviceId);
+        String timezone = device.isPresent() ? device.get().getTimezone() : "UTC";
         try {
             log.info("[{}] Started processing day " + d.toString(), deviceId);
-            trackyEventQueryService.processDay(deviceId, d);
+            trackyEventQueryService.processDay(deviceId, d, timezone);
             log.info("[{}] Finished processing day " + d, deviceId);
             if (lastDay.isEmpty() || lastDay.get().isBefore(date)) {
                 log.info("[{}] Updated job status " + d, deviceId);
