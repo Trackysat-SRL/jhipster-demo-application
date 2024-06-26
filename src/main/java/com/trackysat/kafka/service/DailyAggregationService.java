@@ -1,12 +1,12 @@
 package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.trackysat.kafka.config.Constants;
 import com.trackysat.kafka.domain.DailyAggregation;
 import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.domain.aggregations.SensorValDTO;
-import com.trackysat.kafka.domain.vmson.Ets;
 import com.trackysat.kafka.domain.vmson.VmsonCon;
 import com.trackysat.kafka.repository.DailyAggregationRepository;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
@@ -16,12 +16,9 @@ import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.DateUtils;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,12 +110,24 @@ public class DailyAggregationService {
             List<VmsonCon> con = event.getCon();
             for (VmsonCon vmsonCon : con) {
                 Map<String, SensorStatsDTO> sensorIdDTOSensorValDTOMap = dailyAggregationMapper.conToSensorMap(vmsonCon);
+                this.convertSensorValue(sensorIdDTOSensorValDTOMap);
                 Set<Map.Entry<String, SensorStatsDTO>> entrySet = sensorIdDTOSensorValDTOMap.entrySet();
                 for (Map.Entry<String, SensorStatsDTO> k : entrySet) {
                     sensors.merge(k.getKey(), k.getValue(), this::mergeSensorMaps);
                 }
             }
         }
+
+        //Se presente la CAN km tolgo dalla mappa le altre perchè non le devo salvare.
+        if (Objects.nonNull(sensors.get(Constants.SENSOR_NAME_CAN_DISTANCE_KM))) {
+            checkRemoveSensor(sensors, Constants.SENSOR_NAME_CAN_DISTANCE_M);
+            checkRemoveSensor(sensors, Constants.SENSOR_NAME_DEVICE_DISTANCE_KM);
+            checkRemoveSensor(sensors, Constants.SENSOR_NAME_DEVICE_DISTANCE_M);
+        } else if (Objects.nonNull(sensors.get(Constants.SENSOR_NAME_DEVICE_DISTANCE_KM))) {
+            //Se presente la DEVICE km tolgo dalla mappa quella in metri perchè non è da salvare.
+            checkRemoveSensor(sensors, Constants.SENSOR_NAME_DEVICE_DISTANCE_M);
+        }
+
         log.debug("Total sensors {}", sensors.size());
 
         // TODO Cassandra save fails when over sized
@@ -189,5 +198,49 @@ public class DailyAggregationService {
             .stream()
             .map(dailyAggregationMapper::toDTO)
             .collect(Collectors.toList());
+    }
+
+    private void checkRemoveSensor(Map<String, SensorStatsDTO> sensorStatsDTOMap, String key) {
+        if (Objects.nonNull(sensorStatsDTOMap.get(key))) {
+            sensorStatsDTOMap.remove(key);
+        }
+    }
+
+    private void convertSensorValue(Map<String, SensorStatsDTO> sensorIdDTOSensorValDTOMap) {
+        //verifico se è presente il valore di TotalVehicleDinstance in km da CAN
+        if (Objects.isNull(sensorIdDTOSensorValDTOMap.get(Constants.SENSOR_NAME_CAN_DISTANCE_KM))) {
+            //in caso non presente vedere se è presente in m da CAN
+            if (Objects.isNull(sensorIdDTOSensorValDTOMap.get(Constants.SENSOR_NAME_CAN_DISTANCE_M))) {
+                //in caso non presente vedere se è presente il valore del DEVICE in km
+                if (Objects.isNull(sensorIdDTOSensorValDTOMap.get(Constants.SENSOR_NAME_DEVICE_DISTANCE_KM))) {
+                    //in caso non presente vedere se è presente il valore del DEVICE in m
+                    if (!Objects.isNull(sensorIdDTOSensorValDTOMap.get(Constants.SENSOR_NAME_DEVICE_DISTANCE_M))) {
+                        //converto in km
+                        SensorStatsDTO sensorStatsDTO = SensorStatsDTO.copy(
+                            sensorIdDTOSensorValDTOMap.get(Constants.SENSOR_NAME_DEVICE_DISTANCE_M)
+                        );
+                        sensorStatsDTO
+                            .getValues()
+                            .forEach(val -> {
+                                String newValue = String.valueOf(Double.parseDouble(val.getValue()) / 1000);
+                                val.setValue(newValue);
+                            });
+                        sensorStatsDTO.setMeasureUnit("km");
+                        sensorIdDTOSensorValDTOMap.put(Constants.SENSOR_NAME_DEVICE_DISTANCE_KM, sensorStatsDTO);
+                    }
+                }
+            } else {
+                //converto in km
+                SensorStatsDTO sensorStatsDTO = SensorStatsDTO.copy(sensorIdDTOSensorValDTOMap.get(Constants.SENSOR_NAME_CAN_DISTANCE_M));
+                sensorStatsDTO
+                    .getValues()
+                    .forEach(val -> {
+                        String newValue = String.valueOf(Double.parseDouble(val.getValue()) / 1000);
+                        val.setValue(newValue);
+                    });
+                sensorStatsDTO.setMeasureUnit("km");
+                sensorIdDTOSensorValDTOMap.put(Constants.SENSOR_NAME_CAN_DISTANCE_KM, sensorStatsDTO);
+            }
+        }
     }
 }

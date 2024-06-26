@@ -16,5 +16,10 @@ public final class Constants {
 
     public static final String SENSOR_SERVICE_DISTANCE = "ServiceDistance";
 
+    public static final String SENSOR_NAME_CAN_DISTANCE_KM = "CAN_TotalVehicleDistance_km_DISTANCE_1";
+    public static final String SENSOR_NAME_CAN_DISTANCE_M = "CAN_TotalVehicleDistance_m_DISTANCE_1";
+    public static final String SENSOR_NAME_DEVICE_DISTANCE_KM = "DEVICE_TotalVehicleDistance_km_DISTANCE_1";
+    public static final String SENSOR_NAME_DEVICE_DISTANCE_M = "DEVICE_TotalVehicleDistance_m_DISTANCE_1";
+
     private Constants() {}
 }

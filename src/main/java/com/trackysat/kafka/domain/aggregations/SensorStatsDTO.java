@@ -185,6 +185,17 @@ public class SensorStatsDTO {
         );
     }
 
+    public static SensorStatsDTO copy(SensorStatsDTO other) {
+        SensorStatsDTO newSensorStatsDTO = new SensorStatsDTO();
+        newSensorStatsDTO.setName(other.getName());
+        newSensorStatsDTO.setSid(other.getSid());
+        newSensorStatsDTO.setType(other.getType());
+        newSensorStatsDTO.setValues(other.getValues());
+        newSensorStatsDTO.setSource(other.getSource());
+        newSensorStatsDTO.setMeasureUnit(other.getMeasureUnit());
+        return newSensorStatsDTO;
+    }
+
     public void recalculate(int days) {
         this.setMax(null);
         this.setMin(null);
