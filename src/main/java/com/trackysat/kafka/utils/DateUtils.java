@@ -64,7 +64,7 @@ public class DateUtils {
 
     public static Instant atStartOfMonth(Instant date) {
         String month = String.valueOf(LocalDate.ofInstant(date, ZoneOffset.UTC).getMonthValue());
-        if (!month.equals(10) || !month.equals(11) || !month.equals(12)) month = "0".concat(month);
+        if (!month.equals("10") && !month.equals("11") && !month.equals("12")) month = "0".concat(month);
         int year = LocalDate.ofInstant(date, ZoneOffset.UTC).getYear();
         String firstDayMonth = String.valueOf(year).concat("-").concat(month).concat("-").concat("01").concat("T00:00:00Z");
         return Instant.parse(firstDayMonth);
