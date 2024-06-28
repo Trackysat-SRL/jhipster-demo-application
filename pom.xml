@@ -6,11 +6,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.trackysat.kafka</groupId>
-    <artifactId>trackycontrol</artifactId><!-- -->
-    <version>1.0.9</version>
+    <artifactId>fleettrack</artifactId><!--fleettrack oppure trackycontrol-->
+    <version>0.1.34</version>
     <packaging>war</packaging>
-    <name>TrackyControl Kafka J Hipster</name>
-    <description>Description for TrackyControl</description>
+    <name>fleettrack Kafka J Hipster</name>
+    <description>Description for fleettrack</description>
 
     <repositories>
         <!-- jhipster-needle-maven-repository -->
