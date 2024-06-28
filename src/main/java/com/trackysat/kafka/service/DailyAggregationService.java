@@ -1,12 +1,14 @@
 package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.trackysat.kafka.config.Constants;
 import com.trackysat.kafka.domain.DailyAggregation;
 import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.domain.aggregations.PositionDTO;
 import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.domain.aggregations.SensorValDTO;
+import com.trackysat.kafka.domain.vmson.Sen;
 import com.trackysat.kafka.domain.vmson.VmsonCon;
 import com.trackysat.kafka.repository.DailyAggregationRepository;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
@@ -108,6 +110,21 @@ public class DailyAggregationService {
         Map<String, SensorStatsDTO> sensors = new HashMap<>();
         for (TrackysatEventDTO event : events) {
             List<VmsonCon> con = event.getCon();
+            List<VmsonCon> tmpVmson = con;
+            tmpVmson.forEach(vj -> {
+                List<Sen> listSens = vj
+                    .getSen()
+                    .stream()
+                    .filter(s ->
+                        s.getIid().contains("TotalVehicleDistance") ||
+                        s.getIid().contains("TotalFuel") ||
+                        s.getIid().contains("TimeEngineLife")
+                    )
+                    .collect(Collectors.toList());
+                vj.getSen().clear();
+                vj.setSen(listSens);
+            });
+            con = tmpVmson;
             for (VmsonCon vmsonCon : con) {
                 Map<String, SensorStatsDTO> sensorIdDTOSensorValDTOMap = dailyAggregationMapper.conToSensorMap(vmsonCon);
                 this.convertSensorValue(sensorIdDTOSensorValDTOMap);
