@@ -118,7 +118,8 @@ public class DailyAggregationService {
                     .filter(s ->
                         s.getIid().contains("TotalVehicleDistance") ||
                         s.getIid().contains("TotalFuel") ||
-                        s.getIid().contains("TimeEngineLife")
+                        s.getIid().contains("TimeEngineLife") ||
+                        s.getIid().contains("ServiceDistance")
                     )
                     .collect(Collectors.toList());
                 vj.getSen().clear();
