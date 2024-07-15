@@ -10,6 +10,7 @@ import com.trackysat.kafka.service.dto.DailyAggregationDTO;
 import com.trackysat.kafka.service.dto.TrackysatEventDTO;
 import com.trackysat.kafka.service.mapper.DailyAggregationMapper;
 import com.trackysat.kafka.utils.DateUtils;
+import com.trackysat.kafka.web.rest.dto.AggregationErrorResponseDTO;
 import java.time.*;
 import java.util.*;
 import java.util.function.Function;
@@ -234,6 +235,36 @@ public class AggregationDelegatorService {
             endDate.toString(),
             endDate.toEpochMilli() - startDate.toEpochMilli()
         );
+    }
+
+    public AggregationErrorResponseDTO retryDailyProcessForDevices(List<String> deviceIds, Instant from, Instant to) {
+        var devices = deviceService.getAllByIdIn(deviceIds);
+        List<LocalDate> days = DateUtils.getDaysBetween(from, to);
+        var errors = new HashMap<String, List<String>>();
+
+        log.debug("{} Days to process for devices: {}", days.size(), deviceIds);
+
+        devices.forEach(device -> {
+            var deviceId = device.getUid();
+            var timezone = device.getTimezone();
+            days.forEach(day -> {
+                try {
+                    trackyEventQueryService.processDay(deviceId, day, Objects.isNull(timezone) || timezone.isEmpty() ? "UTC" : timezone);
+                } catch (Exception e) {
+                    DailyAggregationError error = new DailyAggregationError(
+                        deviceId,
+                        day.atStartOfDay().toInstant(ZoneOffset.UTC),
+                        e.getMessage()
+                    );
+                    this.dailyAggregationErrorService.save(error);
+
+                    log.error("[{}] [{}] Error processing day. ERROR: {}", deviceId, day, e.getMessage());
+                    errors.getOrDefault(deviceId, new ArrayList<>()).add(e.getMessage());
+                }
+            });
+        });
+
+        return new AggregationErrorResponseDTO(errors);
     }
 
     public boolean recoveryDailyError(String deviceId, Instant date) {

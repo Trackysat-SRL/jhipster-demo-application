@@ -33,4 +33,8 @@ public class DeviceService {
     public void updateDevice(Device device) {
         deviceRepository.update(device);
     }
+
+    public List<Device> getAllByIdIn(List<String> deviceIds) {
+        return deviceRepository.findByIdIn(deviceIds);
+    }
 }

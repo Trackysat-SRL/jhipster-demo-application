@@ -52,6 +52,10 @@ public class DeviceRepository {
         return deviceDao.findAll().all();
     }
 
+    public List<Device> findByIdIn(List<String> deviceIds) {
+        return deviceDao.findByIdIn(deviceIds).all();
+    }
+
     public Device save(Device device) {
         Set<ConstraintViolation<Device>> violations = validator.validate(device);
         if (violations != null && !violations.isEmpty()) {
@@ -84,6 +88,9 @@ interface DeviceDao {
 
     @Select
     PagingIterable<Device> findAll();
+
+    @Query("select * from device where uid in :deviceIds")
+    PagingIterable<Device> findByIdIn(List<String> deviceIds);
 
     @Insert
     BoundStatement saveQuery(Device device);

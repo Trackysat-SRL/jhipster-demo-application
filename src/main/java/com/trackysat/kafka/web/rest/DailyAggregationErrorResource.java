@@ -3,8 +3,11 @@ package com.trackysat.kafka.web.rest;
 import com.trackysat.kafka.domain.DailyAggregationError;
 import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.DailyAggregationErrorService;
+import com.trackysat.kafka.web.rest.dto.AggregationErrorResponseDTO;
+import com.trackysat.kafka.web.rest.dto.BulkDeviceRequestDTO;
 import java.time.Instant;
 import java.util.List;
+import javax.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -15,7 +18,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.PaginationUtil;
 
 @RestController
@@ -72,5 +74,20 @@ public class DailyAggregationErrorResource {
         dailyAggregationErrorService.delete(error);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/errors/retryAggregate")
+    public ResponseEntity<AggregationErrorResponseDTO> retryDailyAggregate(
+        @RequestBody @Valid BulkDeviceRequestDTO request,
+        @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String from,
+        @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
+    ) {
+        log.debug("REST request to aggregate {}", request);
+        var response = aggregationDelegatorService.retryDailyProcessForDevices(
+            request.getDevices(),
+            Instant.parse(from),
+            Instant.parse(to)
+        );
+        return ResponseEntity.ok(response);
     }
 }
