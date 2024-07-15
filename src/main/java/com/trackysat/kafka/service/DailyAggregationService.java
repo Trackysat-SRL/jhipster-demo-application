@@ -128,14 +128,14 @@ public class DailyAggregationService {
             con = tmpVmson;
             for (VmsonCon vmsonCon : con) {
                 Map<String, SensorStatsDTO> sensorIdDTOSensorValDTOMap = dailyAggregationMapper.conToSensorMap(vmsonCon);
-                this.convertSensorValue(sensorIdDTOSensorValDTOMap);
+
                 Set<Map.Entry<String, SensorStatsDTO>> entrySet = sensorIdDTOSensorValDTOMap.entrySet();
                 for (Map.Entry<String, SensorStatsDTO> k : entrySet) {
                     sensors.merge(k.getKey(), k.getValue(), this::mergeSensorMaps);
                 }
             }
         }
-
+        this.convertSensorValue(sensors);
         //Se presente la CAN km tolgo dalla mappa le altre perchè non le devo salvare.
         if (Objects.nonNull(sensors.get(Constants.SENSOR_NAME_CAN_DISTANCE_KM))) {
             checkRemoveSensor(sensors, Constants.SENSOR_NAME_CAN_DISTANCE_M);
