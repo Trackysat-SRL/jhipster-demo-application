@@ -18,7 +18,6 @@ public class LastGpsPosition implements Serializable {
     @PartitionKey
     String deviceId;
 
-    @ClusteringColumn
     Instant eventPositionDate;
 
     String gpsPosition;
