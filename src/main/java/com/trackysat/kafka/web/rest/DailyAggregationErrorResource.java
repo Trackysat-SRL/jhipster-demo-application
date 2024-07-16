@@ -83,7 +83,7 @@ public class DailyAggregationErrorResource {
         @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) String to
     ) {
         log.debug("REST request to aggregate {}", request);
-        var response = aggregationDelegatorService.retryDailyProcessForDevices(
+        var response = aggregationDelegatorService.retryAggregateProcessForDevices(
             request.getDevices(),
             Instant.parse(from),
             Instant.parse(to)

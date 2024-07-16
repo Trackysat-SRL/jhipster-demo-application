@@ -13,6 +13,7 @@ import com.trackysat.kafka.utils.DateUtils;
 import com.trackysat.kafka.web.rest.dto.AggregationErrorResponseDTO;
 import java.time.*;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -114,7 +115,6 @@ public class AggregationDelegatorService {
     }
 
     /**
-     *
      * @param deviceId
      * @param dateFrom
      * @param dateTo
@@ -133,7 +133,6 @@ public class AggregationDelegatorService {
     }
 
     /**
-     *
      * @param deviceId
      * @param dateFrom
      * @param dateTo
@@ -237,16 +236,27 @@ public class AggregationDelegatorService {
         );
     }
 
-    public AggregationErrorResponseDTO retryDailyProcessForDevices(List<String> deviceIds, Instant from, Instant to) {
+    public AggregationErrorResponseDTO retryAggregateProcessForDevices(List<String> deviceIds, Instant from, Instant to) {
         var devices = deviceService.getAllByIdIn(deviceIds);
         List<LocalDate> days = DateUtils.getDaysBetween(from, to);
+        List<LocalDate> months = DateUtils.getMonthsBetween(from, to);
         var errors = new HashMap<String, List<String>>();
+        BiConsumer<String, String> addErrorMessage = (key, errorMessage) ->
+            errors.compute(
+                key,
+                (k, v) -> {
+                    var value = v == null ? new ArrayList<String>() : v;
+                    value.add(errorMessage);
+                    return value;
+                }
+            );
 
-        log.debug("{} Days to process for devices: {}", days.size(), deviceIds);
+        log.debug("{} Day/s and {} month/s to process for devices: {}", days.size(), months.size(), deviceIds);
 
         devices.forEach(device -> {
             var deviceId = device.getUid();
             var timezone = device.getTimezone();
+
             days.forEach(day -> {
                 try {
                     trackyEventQueryService.processDay(deviceId, day, Objects.isNull(timezone) || timezone.isEmpty() ? "UTC" : timezone);
@@ -257,9 +267,17 @@ public class AggregationDelegatorService {
                         e.getMessage()
                     );
                     this.dailyAggregationErrorService.save(error);
+                    addErrorMessage.accept(deviceId, String.format("ERROR DAILY PROCESS [%s]: %s", day, e.getMessage()));
+                }
+            });
 
-                    log.error("[{}] [{}] Error processing day. ERROR: {}", deviceId, day, e.getMessage());
-                    errors.getOrDefault(deviceId, new ArrayList<>()).add(e.getMessage());
+            months.forEach(month -> {
+                try {
+                    var firstDayOfMonth = month.withDayOfMonth(1).atStartOfDay();
+                    var lastDayOfMonth = YearMonth.from(firstDayOfMonth).atEndOfMonth().atStartOfDay().toInstant(ZoneOffset.UTC);
+                    trackyEventQueryService.processMonth(deviceId, month, firstDayOfMonth.toInstant(ZoneOffset.UTC), lastDayOfMonth);
+                } catch (Exception e) {
+                    addErrorMessage.accept(deviceId, String.format("ERROR MONTHLY PROCESS [%s]: %s", month, e.getMessage()));
                 }
             });
         });
