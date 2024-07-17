@@ -14,7 +14,6 @@ public abstract class AbstractCache<KEY, T> {
     protected long recordTtl;
     protected long recordIdleTime;
     protected ScheduledFuture<?> onExpirationScheduledTask;
-    protected GenericCacheManager manager;
     protected String cacheName;
 
     public AbstractCache(Consumer<T> onExpiration, long checkExpirationTimeInMillis, long recordIdleTime, long recordTtl) {
@@ -22,12 +21,8 @@ public abstract class AbstractCache<KEY, T> {
         this.checkExpirationTimeInMillis = checkExpirationTimeInMillis;
         this.recordTtl = recordTtl;
         this.recordIdleTime = recordIdleTime;
-    }
-
-    protected void setManager(GenericCacheManager manager) {
-        this.manager = manager;
         this.onExpirationScheduledTask =
-            manager
+            GenericCacheManager
                 .getExecutor()
                 .scheduleWithFixedDelay(
                     this::checkExpiredRecords,

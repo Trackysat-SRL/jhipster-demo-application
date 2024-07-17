@@ -6,7 +6,7 @@ import java.util.function.Consumer;
 public abstract class AbstractCacheBuilder<KEY, T> {
 
     protected Consumer<T> onExpiration;
-    protected long checkExpirationTimeInMillis;
+    protected long checkExpirationTimeInMillis = 1000;
     protected long recordTtl = 10000;
     protected long recordIdleTime = 10000;
 

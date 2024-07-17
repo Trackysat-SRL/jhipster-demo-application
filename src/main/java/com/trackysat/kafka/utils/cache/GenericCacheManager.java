@@ -1,62 +1,69 @@
 package com.trackysat.kafka.utils.cache;
 
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import javax.validation.constraints.NotNull;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GenericCacheManager {
+@SuppressWarnings("rawtypes, unchecked")
+public final class GenericCacheManager {
 
-    private final Logger logger = LoggerFactory.getLogger(GenericCacheManager.class);
-    private final ConcurrentHashMap<String, AbstractCache<?, ?>> caches = new ConcurrentHashMap<>();
-    private final long poolSize;
-    private final ScheduledExecutorService executor;
+    private static final Logger logger = LoggerFactory.getLogger(GenericCacheManager.class);
+    private static final ConcurrentHashMap<String, AbstractCache> caches = new ConcurrentHashMap<>();
+    private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(15);
 
-    public GenericCacheManager(int poolSize) {
-        this.poolSize = poolSize;
-        this.executor = Executors.newScheduledThreadPool(poolSize);
-    }
+    private GenericCacheManager() {}
 
-    protected ScheduledExecutorService getExecutor() {
+    static ScheduledExecutorService getExecutor() {
         return executor;
     }
 
-    public long getPoolSize() {
-        return poolSize;
+    /**
+     * Get cache by {@code cacheName} or {@code null} if not present.
+     *
+     * @param cacheName the name of the cache
+     * @param <KEY>     Type of the cache key
+     * @param <T>       Type of cached objects
+     * @return the cache or {@code null} if not found
+     */
+    public static <KEY, T> AbstractCache<KEY, T> getCache(String cacheName) {
+        if (!caches.containsKey(cacheName)) return null;
+        return (AbstractCache<KEY, T>) caches.get(cacheName);
     }
 
-    public Optional<AbstractCache<?, ?>> getCache(String cacheName) {
-        if (!caches.containsKey(cacheName)) return Optional.empty();
-        var cache = caches.get(cacheName);
-        return Optional.of(cache);
-    }
-
-    @SuppressWarnings("unchecked")
-    public <KEY, T> AbstractCache<KEY, T> getCacheOrCreateNew(String cacheName, @NotNull AbstractCache<KEY, T> newCache) {
-        AbstractCache<KEY, T> c = (AbstractCache<KEY, T>) getCache(cacheName).orElse(newCache);
-        c.setManager(this);
+    /**
+     * Get or create a new cache with the specified key. A supplier has been provided instead
+     * of a new created object, in order to avoid to create eagerly a potentially unused object.
+     *
+     * @param cacheName       the cacheName
+     * @param lazyFunSupplier supplier function that creates a new cache if not found
+     * @param <KEY>           Type for cache key
+     * @param <T>             Type for cached objects
+     * @return the cache
+     */
+    public static <KEY, T> AbstractCache<KEY, T> getCacheOrCreateNew(String cacheName, Supplier<AbstractCache<KEY, T>> lazyFunSupplier) {
+        AbstractCache<KEY, T> c = getCache(cacheName);
+        if (c == null) c = lazyFunSupplier.get();
         c.setCacheName(cacheName);
         caches.put(cacheName, c);
         return c;
     }
 
-    public void deleteCache(String cacheName, boolean stopScheduledTask) {
-        var cacheOptional = getCache(cacheName);
-        if (cacheOptional.isEmpty()) return;
-        deleteCache(cacheOptional.get(), stopScheduledTask);
-    }
-
-    public void deleteCache(AbstractCache<?, ?> cache, boolean stopScheduledTask) {
+    /**
+     * Remove the cache from the internal map of running caches and flushes it.
+     * @param cache the cache to remove
+     * @param stopScheduledTask a flag for interrupting the cache scheduled task after delete
+     */
+    public static void deleteCache(AbstractCache cache, boolean stopScheduledTask) {
         if (cache == null || cache.getCacheName() == null) return;
-        this.caches.remove(cache.getCacheName());
+        caches.remove(cache.getCacheName());
         cache.flush();
         if (stopScheduledTask) cache.stopScheduledTask();
     }
 
-    public void destroy() {
+    public static void destroy() {
         logger.debug("Saving all cached records before shutdown");
         caches.values().forEach(cache -> deleteCache(cache, true));
         logger.debug("done");
