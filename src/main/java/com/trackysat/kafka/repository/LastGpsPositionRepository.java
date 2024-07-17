@@ -24,9 +24,9 @@ import org.springframework.stereotype.Repository;
  * Spring Data Cassandra repository for the {@link LastGpsPosition} entity.
  */
 @Repository
-public class LastGpsRepository {
+public class LastGpsPositionRepository {
 
-    private final Logger log = LoggerFactory.getLogger(LastGpsRepository.class);
+    private final Logger log = LoggerFactory.getLogger(LastGpsPositionRepository.class);
 
     private final CqlSession session;
 
@@ -34,7 +34,7 @@ public class LastGpsRepository {
 
     private final LastGpsPositionDao lastGpsPositionDao;
 
-    public LastGpsRepository(CqlSession session, Validator validator, CassandraProperties cassandraProperties) {
+    public LastGpsPositionRepository(CqlSession session, Validator validator, CassandraProperties cassandraProperties) {
         this.session = session;
         this.validator = validator;
         LastGpsPositionTokenMapper lastGpsPositionTokenMapper = new LastGpsPositionTokenMapperBuilder(session).build();
@@ -46,6 +46,10 @@ public class LastGpsRepository {
 
     public Optional<LastGpsPosition> findById(String id) {
         return lastGpsPositionDao.get(id);
+    }
+
+    public List<LastGpsPosition> findByIdIn(List<String> deviceIds) {
+        return lastGpsPositionDao.findByIdIn(deviceIds).all();
     }
 
     public List<LastGpsPosition> findAll() {
@@ -89,6 +93,9 @@ interface LastGpsPositionDao {
 
     @Delete
     BoundStatement deleteQuery(LastGpsPosition lastGpsPosition);
+
+    @Query("select * from last_gps_position where device_id in :deviceIds")
+    PagingIterable<LastGpsPosition> findByIdIn(List<String> deviceIds);
 }
 
 @Mapper
