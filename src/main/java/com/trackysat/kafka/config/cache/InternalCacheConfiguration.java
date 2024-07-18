@@ -26,7 +26,7 @@ public class InternalCacheConfiguration {
                 new InMemoryCacheBuilder<String, LastGpsPosition>()
                     .checkExpirationTimeInMillis(1000)
                     .recordTtl(200_000)
-                    .recordIdleTime(10_000)
+                    .recordIdleTime(180_000)
                     .backOffStrategy(new BackOffStrategy(3, 10_000, 50_000, 3000))
                     .onRecordExpiration(lastGpsPositionRepository::save)
                     .build()
