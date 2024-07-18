@@ -2,6 +2,7 @@ package com.trackysat.kafka;
 
 import com.trackysat.kafka.config.ApplicationProperties;
 import com.trackysat.kafka.config.CRLFLogConverter;
+import com.trackysat.kafka.utils.cache.GenericCacheManager;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
@@ -14,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.core.env.Environment;
 import tech.jhipster.config.DefaultProfileUtil;
 import tech.jhipster.config.JHipsterConstants;
@@ -65,6 +68,7 @@ public class DemoKafkaJHipsterApp {
      */
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(DemoKafkaJHipsterApp.class);
+        app.addListeners((ApplicationListener<ContextClosedEvent>) event -> GenericCacheManager.destroy());
         DefaultProfileUtil.addDefaultProfile(app);
         Environment env = app.run(args).getEnvironment();
         logApplicationStartup(env);

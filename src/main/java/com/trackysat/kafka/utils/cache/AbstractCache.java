@@ -1,22 +1,36 @@
 package com.trackysat.kafka.utils.cache;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractCache<KEY, T> {
 
-    protected Consumer<T> onExpiration;
-    protected long checkExpirationTimeInMillis;
-    protected long recordTtl;
-    protected long recordIdleTime;
-    protected ScheduledFuture<?> onExpirationScheduledTask;
+    protected final Consumer<T> onExpiration;
+    protected final long checkExpirationTimeInMillis;
+    protected final long recordTtl;
+    protected final long recordIdleTime;
+    protected final ScheduledFuture<?> onExpirationScheduledTask;
     protected String cacheName;
+    protected final Executor backOffExecutor;
+    private final Logger logger = LoggerFactory.getLogger(AbstractCache.class);
 
-    public AbstractCache(Consumer<T> onExpiration, long checkExpirationTimeInMillis, long recordIdleTime, long recordTtl) {
+    public AbstractCache(
+        Consumer<T> onExpiration,
+        long checkExpirationTimeInMillis,
+        long recordIdleTime,
+        long recordTtl,
+        BackOffStrategy backOffStrategy
+    ) {
         this.onExpiration = onExpiration;
         this.checkExpirationTimeInMillis = checkExpirationTimeInMillis;
         this.recordTtl = recordTtl;
@@ -30,6 +44,25 @@ public abstract class AbstractCache<KEY, T> {
                     checkExpirationTimeInMillis,
                     TimeUnit.MILLISECONDS
                 );
+
+        this.backOffExecutor =
+            command ->
+                new Thread(() -> {
+                    BackOffStrategy s = backOffStrategy.copy();
+                    while (s.getAttempts() < s.getMaxAttempts()) {
+                        logger.debug("Attempt number [{}]", s.getAttempts() + 1);
+                        try {
+                            Thread.sleep(s.getInitialDelayInMillis());
+                            command.run();
+                            return;
+                        } catch (Exception e) {
+                            s.setAttempts(s.getAttempts() + 1);
+                            s.setInitialDelayInMillis(Math.min(s.getInitialDelayInMillis() + s.getDelay(), s.getMaxDelayInMillis()));
+                        }
+                    }
+                    logger.debug("Exhausted all attempts");
+                })
+                    .start();
     }
 
     protected void setCacheName(String cacheName) {
@@ -77,7 +110,9 @@ public abstract class AbstractCache<KEY, T> {
      * @param predicate the predicate.
      * @return a list of object.
      */
-    public abstract List<T> get(Function<T, Boolean> predicate);
+    public List<T> get(Function<T, Boolean> predicate) {
+        return getValues().stream().filter(predicate::apply).collect(Collectors.toList());
+    }
 
     /**
      * Get only the list of records matching the key
@@ -85,7 +120,9 @@ public abstract class AbstractCache<KEY, T> {
      * @param keys the list of keys
      * @return the list of objects found by keys
      */
-    public abstract List<T> getListByKeys(List<KEY> keys);
+    public List<T> getListByKeys(List<KEY> keys) {
+        return keys.stream().map(this::get).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
+    }
 
     /**
      * Similar to {@link #getListByKeys(List)} but a {@code supplier} function can be specified in order
@@ -98,7 +135,27 @@ public abstract class AbstractCache<KEY, T> {
      * @param keySupplier the key generator for each new object
      * @return the list of objects found by keys
      */
-    public abstract List<T> getListByKeys(List<KEY> keys, Function<List<KEY>, List<T>> supplier, Function<T, KEY> keySupplier);
+    public List<T> getListByKeys(List<KEY> keys, Function<List<KEY>, List<T>> supplier, Function<T, KEY> keySupplier) {
+        if (supplier == null) return getListByKeys(keys);
+        var notFoundList = new ArrayList<KEY>();
+        var objectList = keys
+            .stream()
+            .map(k -> {
+                var record = get(k);
+                if (record.isEmpty()) notFoundList.add(k);
+                return record;
+            })
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(Collectors.toList());
+
+        var newObjectsToCache = supplier.apply(notFoundList);
+
+        newObjectsToCache.stream().collect(Collectors.toMap(keySupplier, Function.identity())).forEach(this::put);
+
+        objectList.addAll(newObjectsToCache);
+        return objectList;
+    }
 
     /**
      * Put the new object to cache only if there is no object stored
@@ -110,7 +167,36 @@ public abstract class AbstractCache<KEY, T> {
      * @param predicate the predicate that takes the previously stored object if any
      * @return the object stored for the specified key
      */
-    public abstract T putIf(KEY key, T obj, Function<T, Boolean> predicate);
+    public T putIf(KEY key, T obj, BiFunction<T, T, Boolean> predicate) {
+        var record = get(key).orElse(null);
+        if (record == null || predicate.apply(record, obj)) {
+            put(key, obj);
+            return obj;
+        }
+
+        return record;
+    }
+
+    /**
+     * Same as {@link #put(Object, Object)} but this functions uses {@link #getOrElse(Object, Function)} to
+     * retrieve the old record.
+     *
+     * @param key       the key of the record
+     * @param obj       the new object
+     * @param supplier  the supplier used for {@link #getOrElse(Object, Function)}
+     * @param predicate the predicate
+     * @return the object stored inside the cache for the specified key
+     */
+
+    public T putIf(KEY key, T obj, Function<KEY, T> supplier, BiFunction<T, T, Boolean> predicate) {
+        var record = getOrElse(key, supplier);
+        if (record == null || predicate.apply(record, obj)) {
+            put(key, obj);
+            return obj;
+        }
+
+        return record;
+    }
 
     /**
      * Get all the records stored inside the cache
@@ -135,10 +221,36 @@ public abstract class AbstractCache<KEY, T> {
     protected abstract void checkExpiredRecords();
 
     /**
+     * Remove from cache the object stored with the specified key
+     *
+     * @param k the key
+     */
+    protected abstract void remove(KEY k);
+
+    /**
      * This function execute some business logic to an expired record
      *
      * @param key    the key
      * @param record the expired record
      */
-    protected abstract void checkRecordExpiration(Object key, AbstractCacheRecord<T> record);
+
+    protected void checkRecordExpiration(KEY key, AbstractCacheRecord<T> record) {
+        if (record.isExpired()) {
+            try {
+                remove(key);
+                this.onExpiration.accept(record.getValue());
+            } catch (Exception e) {
+                logger.error("Exception thrown while checking expiration for record id {}: {}", key, e.getMessage());
+                if (backOffExecutor != null) {
+                    backOffExecutor.execute(() -> {
+                        logger.debug("Retrying executing expiration command for record {}", key);
+                        this.onExpiration.accept(record.getValue());
+                    });
+                }
+            }
+            return;
+        }
+        //this method should be executed every 'checkExpirationTimeInMillis' ms
+        record.updateIdleCounter(checkExpirationTimeInMillis);
+    }
 }

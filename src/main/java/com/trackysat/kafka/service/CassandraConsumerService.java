@@ -2,15 +2,19 @@ package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.DeadLetterQueue;
+import com.trackysat.kafka.domain.LastGpsPosition;
 import com.trackysat.kafka.domain.TrackyEvent;
 import com.trackysat.kafka.domain.Vmson;
 import com.trackysat.kafka.repository.DeadLetterQueueRepository;
 import com.trackysat.kafka.repository.DeviceRepository;
+import com.trackysat.kafka.repository.LastGpsPositionRepository;
 import com.trackysat.kafka.repository.TrackyEventRepository;
 import com.trackysat.kafka.service.dto.StatusDTO;
 import com.trackysat.kafka.service.mapper.DeviceMapper;
+import com.trackysat.kafka.service.mapper.LastGpsPositionMapper;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.JSONUtils;
+import com.trackysat.kafka.utils.cache.AbstractCache;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -36,7 +40,7 @@ public class CassandraConsumerService {
 
     //public static final String TRACKYSAT_GROUP = "trackysat";
     public static final String TRACKYSAT_GROUP = "prod-trackysat-consumer-group";
-   // public static final String TRACKYSAT_TOPIC = "a-19";
+    // public static final String TRACKYSAT_TOPIC = "a-19";
     public static final String TRACKYSAT_TOPIC = "partner-trackysat";
 
     @Value(value = "${kafka.consumer.number}")
@@ -53,6 +57,12 @@ public class CassandraConsumerService {
 
     private final DeviceRepository deviceRepository;
 
+    private final LastGpsPositionMapper lastGpsPositionMapper;
+
+    private final LastGpsPositionRepository lastGpsPositionRepository;
+
+    private final AbstractCache<String, LastGpsPosition> lastGpsPositionAbstractCache;
+
     private final AtomicBoolean isEnabled = new AtomicBoolean(true);
     private final AtomicInteger eventCounter = new AtomicInteger(0);
     private final AtomicInteger errorCounter = new AtomicInteger(0);
@@ -64,13 +74,19 @@ public class CassandraConsumerService {
         TrackyEventRepository trackyEventRepository,
         TrackysatEventMapper trackysatEventMapper,
         DeviceMapper deviceMapper,
-        DeviceRepository deviceRepository
+        DeviceRepository deviceRepository,
+        LastGpsPositionMapper lastGpsPositionMapper,
+        LastGpsPositionRepository lastGpsPositionRepository,
+        AbstractCache<String, LastGpsPosition> lastGpsPositionAbstractCache
     ) {
         this.deadLetterQueueRepository = deadLetterQueueRepository;
         this.trackyEventRepository = trackyEventRepository;
         this.trackysatEventMapper = trackysatEventMapper;
         this.deviceMapper = deviceMapper;
         this.deviceRepository = deviceRepository;
+        this.lastGpsPositionMapper = lastGpsPositionMapper;
+        this.lastGpsPositionRepository = lastGpsPositionRepository;
+        this.lastGpsPositionAbstractCache = lastGpsPositionAbstractCache;
     }
 
     @KafkaListener(
@@ -115,6 +131,16 @@ public class CassandraConsumerService {
             TrackyEvent event = trackysatEventMapper.fromVmson(record);
             trackyEventRepository.save(event);
             deviceRepository.save(deviceMapper.fromVmson(record));
+
+            /* cache insert of the last position received */
+            var position = lastGpsPositionMapper.fromVmson(record);
+            lastGpsPositionAbstractCache.putIf(
+                position.getDeviceId(),
+                position,
+                key -> lastGpsPositionRepository.findById(key).orElse(null),
+                (old, newPos) -> old.getEventPositionDate().compareTo(newPos.getEventPositionDate()) < 0
+            );
+
             log.debug("Event saved. device: {} date: {}", event.getDeviceId(), event.getCreatedDate());
         }
     }

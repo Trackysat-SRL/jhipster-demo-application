@@ -8,6 +8,12 @@ public class InMemoryCacheBuilder<KEY, T> extends AbstractCacheBuilder<KEY, T> {
 
     @Override
     public AbstractCache<KEY, T> build() {
-        return new InMemoryCache<>(this.onExpiration, this.checkExpirationTimeInMillis, this.recordIdleTime, this.recordTtl);
+        return new InMemoryCache<>(
+            this.onExpiration,
+            this.checkExpirationTimeInMillis,
+            this.recordIdleTime,
+            this.recordTtl,
+            this.backOffStrategy
+        );
     }
 }

@@ -1,6 +1,7 @@
 package com.trackysat.kafka.utils.cache.builder;
 
 import com.trackysat.kafka.utils.cache.AbstractCache;
+import com.trackysat.kafka.utils.cache.BackOffStrategy;
 import java.util.function.Consumer;
 
 public abstract class AbstractCacheBuilder<KEY, T> {
@@ -9,6 +10,7 @@ public abstract class AbstractCacheBuilder<KEY, T> {
     protected long checkExpirationTimeInMillis = 1000;
     protected long recordTtl = 10000;
     protected long recordIdleTime = 10000;
+    protected BackOffStrategy backOffStrategy;
 
     public AbstractCacheBuilder<KEY, T> recordTtl(long recordTtl) {
         this.recordTtl = recordTtl;
@@ -27,6 +29,11 @@ public abstract class AbstractCacheBuilder<KEY, T> {
 
     public AbstractCacheBuilder<KEY, T> checkExpirationTimeInMillis(long ms) {
         this.checkExpirationTimeInMillis = ms;
+        return this;
+    }
+
+    public AbstractCacheBuilder<KEY, T> backOffStrategy(BackOffStrategy strategy) {
+        this.backOffStrategy = strategy;
         return this;
     }
 

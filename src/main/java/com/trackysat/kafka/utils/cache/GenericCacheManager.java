@@ -4,13 +4,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes, unchecked")
 public final class GenericCacheManager {
 
-    private static final Logger logger = LoggerFactory.getLogger(GenericCacheManager.class);
     private static final ConcurrentHashMap<String, AbstractCache> caches = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(15);
 
@@ -53,7 +50,8 @@ public final class GenericCacheManager {
 
     /**
      * Remove the cache from the internal map of running caches and flushes it.
-     * @param cache the cache to remove
+     *
+     * @param cache             the cache to remove
      * @param stopScheduledTask a flag for interrupting the cache scheduled task after delete
      */
     public static void deleteCache(AbstractCache cache, boolean stopScheduledTask) {
@@ -63,9 +61,18 @@ public final class GenericCacheManager {
         if (stopScheduledTask) cache.stopScheduledTask();
     }
 
+    /**
+     * Flushes all created caches. This function is meant to be used only as {@code shutdown-hook}.
+     */
     public static void destroy() {
-        logger.debug("Saving all cached records before shutdown");
-        caches.values().forEach(cache -> deleteCache(cache, true));
-        logger.debug("done");
+        System.out.printf("[%s] Saving all cached records before shutdown%n", GenericCacheManager.class.getName());
+        caches
+            .values()
+            .forEach(cache -> {
+                System.out.printf("[%s] Flushing cache %s%n", GenericCacheManager.class.getName(), cache.getCacheName());
+                deleteCache(cache, true);
+                System.out.printf("[%s] Cache %s flushed%n", GenericCacheManager.class.getName(), cache.getCacheName());
+            });
+        System.out.printf("[%s] Done%n", GenericCacheManager.class.getName());
     }
 }

@@ -3,6 +3,7 @@ package com.trackysat.kafka.config.cache;
 import com.trackysat.kafka.domain.LastGpsPosition;
 import com.trackysat.kafka.repository.LastGpsPositionRepository;
 import com.trackysat.kafka.utils.cache.AbstractCache;
+import com.trackysat.kafka.utils.cache.BackOffStrategy;
 import com.trackysat.kafka.utils.cache.GenericCacheManager;
 import com.trackysat.kafka.utils.cache.builder.impl.InMemoryCacheBuilder;
 import org.slf4j.Logger;
@@ -25,7 +26,8 @@ public class InternalCacheConfiguration {
                 new InMemoryCacheBuilder<String, LastGpsPosition>()
                     .checkExpirationTimeInMillis(1000)
                     .recordTtl(200_000)
-                    .recordIdleTime(100_000)
+                    .recordIdleTime(10_000)
+                    .backOffStrategy(new BackOffStrategy(3, 10_000, 50_000, 3000))
                     .onRecordExpiration(lastGpsPositionRepository::save)
                     .build()
         );

@@ -1,14 +1,13 @@
 package com.trackysat.kafka.utils.cache.impl;
 
 import com.trackysat.kafka.utils.cache.AbstractCache;
-import com.trackysat.kafka.utils.cache.AbstractCacheRecord;
+import com.trackysat.kafka.utils.cache.BackOffStrategy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,31 +15,27 @@ import org.slf4j.LoggerFactory;
 public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
 
     private final Logger logger = LoggerFactory.getLogger(InMemoryCache.class);
-    private final ConcurrentHashMap<Object, InMemoryCacheRecord<T>> internalCache = new ConcurrentHashMap<>();
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ConcurrentHashMap<KEY, InMemoryCacheRecord<T>> internalCache = new ConcurrentHashMap<>();
 
-    public InMemoryCache(Consumer<T> onExpiration, long checkExpirationTimeInMillis, long recordIdleTime, long recordTtl) {
-        super(onExpiration, checkExpirationTimeInMillis, recordIdleTime, recordTtl);
-    }
-
-    private void withLock(Runnable f) {
-        try {
-            while (!lock.tryLock()) {
-                Thread.yield();
-            }
-            f.run();
-        } finally {
-            lock.unlock();
-        }
+    public InMemoryCache(
+        Consumer<T> onExpiration,
+        long checkExpirationTimeInMillis,
+        long recordIdleTime,
+        long recordTtl,
+        BackOffStrategy backOffStrategy
+    ) {
+        super(onExpiration, checkExpirationTimeInMillis, recordIdleTime, recordTtl, backOffStrategy);
     }
 
     @Override
     protected void flush() {
-        logger.debug("Deleting cache [{}] - START", cacheName);
         if (internalCache.isEmpty() || onExpiration == null) return;
-        withLock(() -> this.internalCache.values().stream().map(InMemoryCacheRecord::getValue).forEach(onExpiration));
+        var start = System.currentTimeMillis();
+        logger.debug("Deleting cache [{}] - START ", cacheName);
+        internalCache.values().parallelStream().forEach(record -> onExpiration.accept(record.getValue()));
+        System.out.printf("Deleting cache [%s] - END (%dms)%n", cacheName, System.currentTimeMillis() - start);
         internalCache.clear();
-        logger.debug("Deleting cache [{}] - END", cacheName);
+        logger.debug("Cache [{}] deleted.", cacheName);
     }
 
     @Override
@@ -75,62 +70,15 @@ public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
     protected void checkExpiredRecords() {
         if (internalCache.isEmpty()) return;
         logger.debug("[{}] - checkExpiredRecords", cacheName);
-        withLock(() -> this.internalCache.forEach(this::checkRecordExpiration));
+        List<Runnable> operations = new ArrayList<>();
+        this.internalCache.forEach((k, v) -> operations.add(() -> checkRecordExpiration(k, v)));
+        /* to execute in parallel */
+        operations.parallelStream().forEach(Runnable::run);
     }
 
     @Override
-    protected void checkRecordExpiration(Object key, AbstractCacheRecord<T> record) {
-        if (record.isExpired()) {
-            logger.debug("[{}] - record with key [{}] is expired - removing from cache", cacheName, key);
-            this.onExpiration.accept(record.getValue());
-            this.internalCache.remove(key);
-            return;
-        }
-        //this method should be executed every 'checkExpirationTimeInMillis' ms
-        record.updateIdleCounter(checkExpirationTimeInMillis);
+    protected void remove(KEY k) {
+        this.internalCache.remove(k);
     }
-
-    @Override
-    public T putIf(KEY key, T obj, Function<T, Boolean> predicate) {
-        var record = internalCache.getOrDefault(key, null);
-        if (record == null || predicate.apply(record.getValue())) {
-            put(key, obj);
-            return obj;
-        }
-
-        return record.getValue();
-    }
-
-    @Override
-    public List<T> get(Function<T, Boolean> predicate) {
-        return internalCache.values().stream().map(InMemoryCacheRecord::getValue).filter(predicate::apply).collect(Collectors.toList());
-    }
-
-    @Override
-    public List<T> getListByKeys(List<KEY> keys) {
-        return keys.stream().map(this::get).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
-    }
-
-    @Override
-    public List<T> getListByKeys(List<KEY> keys, Function<List<KEY>, List<T>> supplier, Function<T, KEY> keySupplier) {
-        if (supplier == null) return getListByKeys(keys);
-        var notFoundList = new ArrayList<KEY>();
-        var objectList = keys
-            .stream()
-            .map(k -> {
-                var record = get(k);
-                if (record.isEmpty()) notFoundList.add(k);
-                return record;
-            })
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toList());
-
-        var newObjectsToCache = supplier.apply(notFoundList);
-
-        newObjectsToCache.stream().collect(Collectors.toMap(keySupplier, Function.identity())).forEach(this::put);
-
-        objectList.addAll(newObjectsToCache);
-        return objectList;
-    }
+    //            logger.debug("[{}] - record with key [{}] is expired - removing from cache", cacheName, key);
 }
