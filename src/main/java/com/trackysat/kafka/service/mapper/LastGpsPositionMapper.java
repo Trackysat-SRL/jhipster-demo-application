@@ -3,6 +3,7 @@ package com.trackysat.kafka.service.mapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.trackysat.kafka.domain.LastGpsPosition;
 import com.trackysat.kafka.domain.Vmson;
+import com.trackysat.kafka.service.dto.LastGpsPositionDTO;
 import com.trackysat.kafka.utils.JSONUtils;
 import java.util.Collections;
 import java.util.Comparator;
@@ -27,5 +28,9 @@ public class LastGpsPositionMapper {
         position.setEventPositionDate(mostRecentPosition.getEts().getTst());
         position.setDeviceId(event.getVmson().getOri().getUid());
         return position;
+    }
+
+    public LastGpsPositionDTO toDto(LastGpsPosition entity) {
+        return new LastGpsPositionDTO(entity.getDeviceId(), entity.getEventPositionDate(), entity.getGpsPosition());
     }
 }

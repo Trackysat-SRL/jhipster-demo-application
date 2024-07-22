@@ -80,5 +80,4 @@ public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
     protected void remove(KEY k) {
         this.internalCache.remove(k);
     }
-    //            logger.debug("[{}] - record with key [{}] is expired - removing from cache", cacheName, key);
 }
