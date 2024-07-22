@@ -13,7 +13,8 @@ public class InMemoryCacheBuilder<KEY, T> extends AbstractCacheBuilder<KEY, T> {
             this.checkExpirationTimeInMillis,
             this.recordIdleTime,
             this.recordTtl,
-            this.backOffStrategy
+            this.backOffStrategy,
+            this.processOnlyUpdatedOrNewRecords
         );
     }
 }

@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -23,13 +24,16 @@ public abstract class AbstractCache<KEY, T> {
     protected String cacheName;
     protected final Executor backOffExecutor;
     private final Logger logger = LoggerFactory.getLogger(AbstractCache.class);
+    protected final boolean processOnlyUpdatedOrNewRecords;
+    private final ReentrantLock lock = new ReentrantLock();
 
     public AbstractCache(
         Consumer<T> onExpiration,
         long checkExpirationTimeInMillis,
         long recordIdleTime,
         long recordTtl,
-        BackOffStrategy backOffStrategy
+        BackOffStrategy backOffStrategy,
+        boolean processOnlyUpdatedOrNewRecords
     ) {
         this.onExpiration = onExpiration;
         this.checkExpirationTimeInMillis = checkExpirationTimeInMillis;
@@ -63,6 +67,7 @@ public abstract class AbstractCache<KEY, T> {
                     logger.debug("Exhausted all attempts");
                 })
                     .start();
+        this.processOnlyUpdatedOrNewRecords = processOnlyUpdatedOrNewRecords;
     }
 
     protected void setCacheName(String cacheName) {
@@ -89,11 +94,17 @@ public abstract class AbstractCache<KEY, T> {
      * @return the object stored with the provided key.
      */
     public T getOrElse(KEY key, Function<KEY, T> newObjectProvider) {
+        logger.debug("[{}] - getting record with key [{}]", cacheName, key);
         var optional = get(key);
         if (optional.isPresent()) return optional.get();
+        logger.debug("[{}] - record with key [{}] not found inside the cache - getting the record by supplier", cacheName, key);
         var newObj = newObjectProvider.apply(key);
-        if (newObj == null) return null;
-        return put(key, newObj);
+        if (newObj == null) {
+            logger.debug("[{}] - the object returned by supplier by key [{}] is null", cacheName, key);
+            return null;
+        }
+
+        return processOnlyUpdatedOrNewRecords ? put(key, newObj, false) : put(key, newObj);
     }
 
     /**
@@ -215,6 +226,15 @@ public abstract class AbstractCache<KEY, T> {
     public abstract T put(KEY key, T obj);
 
     /**
+     * Store a new object inside the cache using {@code key}.
+     *
+     * @param key the key
+     * @param obj the object
+     * @return the object stored.
+     */
+    public abstract T put(KEY key, T obj, boolean process);
+
+    /**
      * Routine that checks if there are some expired records inside the cache, and execute
      * {@link #checkRecordExpiration(Object, AbstractCacheRecord)} to each record found in this way.
      */
@@ -227,6 +247,17 @@ public abstract class AbstractCache<KEY, T> {
      */
     protected abstract void remove(KEY k);
 
+    protected void withLock(Runnable f) {
+        try {
+            while (!lock.tryLock()) {
+                Thread.yield();
+            }
+            f.run();
+        } finally {
+            if (lock.isLocked()) lock.unlock();
+        }
+    }
+
     /**
      * This function execute some business logic to an expired record
      *
@@ -237,8 +268,12 @@ public abstract class AbstractCache<KEY, T> {
     protected void checkRecordExpiration(KEY key, AbstractCacheRecord<T> record) {
         if (record.isExpired()) {
             try {
-                remove(key);
-                this.onExpiration.accept(record.getValue());
+                logger.debug("[{}] - record expired: [{}]", cacheName, record);
+                if (record.needToBeProcessed()) {
+                    logger.debug("[{}] - processing record with key [{}]", cacheName, key);
+                    this.onExpiration.accept(record.getValue());
+                }
+                withLock(() -> remove(key));
             } catch (Exception e) {
                 logger.error("Exception thrown while checking expiration for record id {}: {}", key, e.getMessage());
                 if (backOffExecutor != null) {

@@ -27,6 +27,7 @@ public class InternalCacheConfiguration {
                     .checkExpirationTimeInMillis(1000)
                     .recordTtl(200_000)
                     .recordIdleTime(180_000)
+                    .processOnlyUpdatedOrNewRecords(true)
                     .backOffStrategy(new BackOffStrategy(3, 10_000, 50_000, 3000))
                     .onRecordExpiration(lastGpsPositionRepository::save)
                     .build()

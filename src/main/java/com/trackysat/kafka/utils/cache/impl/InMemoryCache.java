@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -22,9 +21,10 @@ public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
         long checkExpirationTimeInMillis,
         long recordIdleTime,
         long recordTtl,
-        BackOffStrategy backOffStrategy
+        BackOffStrategy backOffStrategy,
+        boolean saveOnlyUpdatedOrNewRecords
     ) {
-        super(onExpiration, checkExpirationTimeInMillis, recordIdleTime, recordTtl, backOffStrategy);
+        super(onExpiration, checkExpirationTimeInMillis, recordIdleTime, recordTtl, backOffStrategy, saveOnlyUpdatedOrNewRecords);
     }
 
     @Override
@@ -52,16 +52,24 @@ public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
 
     @Override
     public T put(KEY key, T obj) {
-        internalCache.compute(
-            key,
-            (k, v) -> {
-                if (v == null) {
-                    return new InMemoryCacheRecord<>(this.recordIdleTime, this.recordTtl, obj);
-                }
+        return put(key, obj, true);
+    }
 
-                v.setValue(obj);
-                return v;
-            }
+    @Override
+    public T put(KEY key, T obj, boolean process) {
+        logger.debug("[{}] - storing new record with key [{}], process on expiration [{}]: {}", cacheName, key, process, obj);
+        withLock(() ->
+            internalCache.compute(
+                key,
+                (k, v) -> {
+                    if (v == null) {
+                        return new InMemoryCacheRecord<>(this.recordIdleTime, this.recordTtl, obj, process);
+                    }
+                    logger.debug("[{}] - a record with key [{}] was already stored: updating the old value", cacheName, k);
+                    v.setValue(obj);
+                    return v;
+                }
+            )
         );
         return obj;
     }
@@ -78,6 +86,7 @@ public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
 
     @Override
     protected void remove(KEY k) {
+        logger.debug("[{}] - removing record with key [{}]", cacheName, k);
         this.internalCache.remove(k);
     }
 }

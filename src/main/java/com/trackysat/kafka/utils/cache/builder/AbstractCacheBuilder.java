@@ -11,6 +11,7 @@ public abstract class AbstractCacheBuilder<KEY, T> {
     protected long recordTtl = 10000;
     protected long recordIdleTime = 10000;
     protected BackOffStrategy backOffStrategy;
+    protected boolean processOnlyUpdatedOrNewRecords = false;
 
     public AbstractCacheBuilder<KEY, T> recordTtl(long recordTtl) {
         this.recordTtl = recordTtl;
@@ -34,6 +35,11 @@ public abstract class AbstractCacheBuilder<KEY, T> {
 
     public AbstractCacheBuilder<KEY, T> backOffStrategy(BackOffStrategy strategy) {
         this.backOffStrategy = strategy;
+        return this;
+    }
+
+    public AbstractCacheBuilder<KEY, T> processOnlyUpdatedOrNewRecords(boolean flag) {
+        this.processOnlyUpdatedOrNewRecords = flag;
         return this;
     }
 
