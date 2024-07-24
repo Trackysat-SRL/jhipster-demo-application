@@ -22,8 +22,9 @@ public class InternalCacheConfiguration {
         logger.debug("Creating cache {}", LAST_GPS_POSITION_CACHE_NAME);
         return GenericCacheManager.getCacheOrCreateNew(
             LAST_GPS_POSITION_CACHE_NAME,
-            () ->
+            name ->
                 new InMemoryCacheBuilder<String, LastGpsPosition>()
+                    .cacheName(name)
                     .checkExpirationTimeInMillis(1000)
                     .recordTtl(200_000)
                     .recordIdleTime(180_000)

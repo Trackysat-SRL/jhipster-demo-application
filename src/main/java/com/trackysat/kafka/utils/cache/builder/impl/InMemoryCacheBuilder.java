@@ -14,7 +14,8 @@ public class InMemoryCacheBuilder<KEY, T> extends AbstractCacheBuilder<KEY, T> {
             this.recordIdleTime,
             this.recordTtl,
             this.backOffStrategy,
-            this.processOnlyUpdatedOrNewRecords
+            this.processOnlyUpdatedOrNewRecords,
+            this.cacheName
         );
     }
 }

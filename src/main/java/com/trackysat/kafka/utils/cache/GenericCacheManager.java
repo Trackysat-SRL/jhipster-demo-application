@@ -3,7 +3,7 @@ package com.trackysat.kafka.utils.cache;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 @SuppressWarnings("rawtypes, unchecked")
 public final class GenericCacheManager {
@@ -40,10 +40,12 @@ public final class GenericCacheManager {
      * @param <T>             Type for cached objects
      * @return the cache
      */
-    public static <KEY, T> AbstractCache<KEY, T> getCacheOrCreateNew(String cacheName, Supplier<AbstractCache<KEY, T>> lazyFunSupplier) {
+    public static <KEY, T> AbstractCache<KEY, T> getCacheOrCreateNew(
+        String cacheName,
+        Function<String, AbstractCache<KEY, T>> lazyFunSupplier
+    ) {
         AbstractCache<KEY, T> c = getCache(cacheName);
-        if (c == null) c = lazyFunSupplier.get();
-        c.setCacheName(cacheName);
+        if (c == null) c = lazyFunSupplier.apply(cacheName);
         caches.put(cacheName, c);
         return c;
     }

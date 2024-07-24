@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -21,20 +21,21 @@ public abstract class AbstractCache<KEY, T> {
     protected final long recordTtl;
     protected final long recordIdleTime;
     protected final ScheduledFuture<?> onExpirationScheduledTask;
-    protected String cacheName;
+    protected final String cacheName;
     protected final Executor backOffExecutor;
     private final Logger logger = LoggerFactory.getLogger(AbstractCache.class);
     protected final boolean processOnlyUpdatedOrNewRecords;
-    private final ReentrantLock lock = new ReentrantLock();
 
     public AbstractCache(
         Consumer<T> onExpiration,
         long checkExpirationTimeInMillis,
         long recordIdleTime,
         long recordTtl,
+        String cacheName,
         BackOffStrategy backOffStrategy,
         boolean processOnlyUpdatedOrNewRecords
     ) {
+        this.cacheName = cacheName;
         this.onExpiration = onExpiration;
         this.checkExpirationTimeInMillis = checkExpirationTimeInMillis;
         this.recordTtl = recordTtl;
@@ -70,12 +71,14 @@ public abstract class AbstractCache<KEY, T> {
         this.processOnlyUpdatedOrNewRecords = processOnlyUpdatedOrNewRecords;
     }
 
-    protected void setCacheName(String cacheName) {
-        this.cacheName = cacheName;
-    }
-
     public String getCacheName() {
         return cacheName;
+    }
+
+    protected void withLock(Runnable r) {
+        synchronized (cacheName) {
+            r.run();
+        }
     }
 
     protected abstract void flush();
@@ -179,13 +182,7 @@ public abstract class AbstractCache<KEY, T> {
      * @return the object stored for the specified key
      */
     public T putIf(KEY key, T obj, BiFunction<T, T, Boolean> predicate) {
-        var record = get(key).orElse(null);
-        if (record == null || predicate.apply(record, obj)) {
-            put(key, obj);
-            return obj;
-        }
-
-        return record;
+        return putIf(key, obj, k -> null, predicate);
     }
 
     /**
@@ -200,13 +197,17 @@ public abstract class AbstractCache<KEY, T> {
      */
 
     public T putIf(KEY key, T obj, Function<KEY, T> supplier, BiFunction<T, T, Boolean> predicate) {
-        var record = getOrElse(key, supplier);
-        if (record == null || predicate.apply(record, obj)) {
-            put(key, obj);
-            return obj;
-        }
-
-        return record;
+        AtomicReference<T> record = new AtomicReference<>();
+        withLock(() -> {
+            record.set(getOrElse(key, supplier));
+            if (record.get() == null || predicate.apply(record.get(), obj)) {
+                put(key, obj);
+                record.set(obj);
+            } else {
+                logger.debug("the obj {} is older than record value {}", obj, record.get());
+            }
+        });
+        return record.get();
     }
 
     /**
@@ -247,17 +248,6 @@ public abstract class AbstractCache<KEY, T> {
      */
     protected abstract void remove(KEY k);
 
-    protected void withLock(Runnable f) {
-        try {
-            while (!lock.tryLock()) {
-                Thread.yield();
-            }
-            f.run();
-        } finally {
-            if (lock.isLocked()) lock.unlock();
-        }
-    }
-
     /**
      * This function execute some business logic to an expired record
      *
@@ -273,7 +263,7 @@ public abstract class AbstractCache<KEY, T> {
                     logger.debug("[{}] - processing record with key [{}]", cacheName, key);
                     this.onExpiration.accept(record.getValue());
                 }
-                withLock(() -> remove(key));
+                remove(key);
             } catch (Exception e) {
                 logger.error("Exception thrown while checking expiration for record id {}: {}", key, e.getMessage());
                 if (backOffExecutor != null) {

@@ -12,9 +12,15 @@ public abstract class AbstractCacheBuilder<KEY, T> {
     protected long recordIdleTime = 10000;
     protected BackOffStrategy backOffStrategy;
     protected boolean processOnlyUpdatedOrNewRecords = false;
+    protected String cacheName;
 
     public AbstractCacheBuilder<KEY, T> recordTtl(long recordTtl) {
         this.recordTtl = recordTtl;
+        return this;
+    }
+
+    public AbstractCacheBuilder<KEY, T> cacheName(String cacheName) {
+        this.cacheName = cacheName;
         return this;
     }
 

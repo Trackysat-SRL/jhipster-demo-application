@@ -22,9 +22,18 @@ public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
         long recordIdleTime,
         long recordTtl,
         BackOffStrategy backOffStrategy,
-        boolean saveOnlyUpdatedOrNewRecords
+        boolean saveOnlyUpdatedOrNewRecords,
+        String cacheName
     ) {
-        super(onExpiration, checkExpirationTimeInMillis, recordIdleTime, recordTtl, backOffStrategy, saveOnlyUpdatedOrNewRecords);
+        super(
+            onExpiration,
+            checkExpirationTimeInMillis,
+            recordIdleTime,
+            recordTtl,
+            cacheName,
+            backOffStrategy,
+            saveOnlyUpdatedOrNewRecords
+        );
     }
 
     @Override
@@ -58,30 +67,31 @@ public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
     @Override
     public T put(KEY key, T obj, boolean process) {
         logger.debug("[{}] - storing new record with key [{}], process on expiration [{}]: {}", cacheName, key, process, obj);
-        withLock(() ->
-            internalCache.compute(
-                key,
-                (k, v) -> {
-                    if (v == null) {
-                        return new InMemoryCacheRecord<>(this.recordIdleTime, this.recordTtl, obj, process);
-                    }
-                    logger.debug("[{}] - a record with key [{}] was already stored: updating the old value", cacheName, k);
-                    v.setValue(obj);
-                    return v;
+
+        internalCache.compute(
+            key,
+            (k, v) -> {
+                if (v == null) {
+                    return new InMemoryCacheRecord<>(this.recordIdleTime, this.recordTtl, obj, process);
                 }
-            )
+                logger.debug("[{}] - a record with key [{}] was already stored: updating the old value", cacheName, k);
+                v.setValue(obj);
+                return v;
+            }
         );
         return obj;
     }
 
     @Override
     protected void checkExpiredRecords() {
-        if (internalCache.isEmpty()) return;
-        logger.debug("[{}] - checkExpiredRecords", cacheName);
-        List<Runnable> operations = new ArrayList<>();
-        this.internalCache.forEach((k, v) -> operations.add(() -> checkRecordExpiration(k, v)));
-        /* to execute in parallel */
-        operations.parallelStream().forEach(Runnable::run);
+        withLock(() -> {
+            if (internalCache.isEmpty()) return;
+            logger.debug("[{}] - checkExpiredRecords", cacheName);
+            List<Runnable> operations = new ArrayList<>();
+            this.internalCache.forEach((k, v) -> operations.add(() -> checkRecordExpiration(k, v)));
+            /* to execute in parallel */
+            operations.parallelStream().forEach(Runnable::run);
+        });
     }
 
     @Override
