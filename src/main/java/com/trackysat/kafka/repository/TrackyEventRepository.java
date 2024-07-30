@@ -60,6 +60,10 @@ public class TrackyEventRepository {
             .flatMap(row -> trackysatEventDao.get(row.get("device_id", String.class), row.get("created_date", Instant.class)));
     }
 
+    public List<TrackyEvent> findEventsFromDate(String deviceId, Instant date) {
+        return trackysatEventDao.getFromInstant(deviceId, date).all();
+    }
+
     public List<TrackyEvent> findOneByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
         log.info("Start query findOneByDeviceIdAndDateRange device_id " + deviceId + " from_date " + dateFrom + " to_date " + dateTo);
         BoundStatement stmt = findAllByDeviceIdAndDates
@@ -153,6 +157,9 @@ interface TrackyEventDao {
 
     @Delete
     BoundStatement deleteQuery(TrackyEvent trackysatEvent);
+
+    @Query("select * from tracky_event where device_id = :deviceId and created_date >= :instant")
+    PagingIterable<TrackyEvent> getFromInstant(String deviceId, Instant instant);
 }
 
 @Mapper

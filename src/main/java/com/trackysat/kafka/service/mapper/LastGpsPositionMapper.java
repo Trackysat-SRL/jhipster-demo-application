@@ -16,16 +16,12 @@ public class LastGpsPositionMapper {
         var conList = event.getVmson().getCon();
         if (conList.isEmpty()) return null;
         conList.sort(Collections.reverseOrder(Comparator.comparing(a -> a.getEts().getTst())));
-        var mostRecentPosition = conList.stream().findFirst().orElseThrow();
+        var optionalPosition = conList.stream().findFirst();
+        if (optionalPosition.isEmpty()) return null;
+        var lastPosition = optionalPosition.get();
         var position = new LastGpsPosition();
-        position.setGpsPosition(
-            "{ \"ets\" :" +
-            JSONUtils.toString(mostRecentPosition.getEts()) +
-            ", \"sat\" :" +
-            JSONUtils.toString(mostRecentPosition.getSat()) +
-            " }"
-        );
-        position.setEventPositionDate(mostRecentPosition.getEts().getTst());
+        position.setGpsPosition(JSONUtils.toString(lastPosition));
+        position.setEventPositionDate(lastPosition.getEts().getTst());
         position.setDeviceId(event.getVmson().getOri().getUid());
         return position;
     }

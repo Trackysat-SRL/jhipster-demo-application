@@ -1,17 +1,14 @@
 package com.trackysat.kafka.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.trackysat.kafka.domain.DeadLetterQueue;
-import com.trackysat.kafka.domain.LastGpsPosition;
-import com.trackysat.kafka.domain.TrackyEvent;
-import com.trackysat.kafka.domain.Vmson;
-import com.trackysat.kafka.repository.DeadLetterQueueRepository;
-import com.trackysat.kafka.repository.DeviceRepository;
-import com.trackysat.kafka.repository.LastGpsPositionRepository;
-import com.trackysat.kafka.repository.TrackyEventRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.trackysat.kafka.domain.*;
+import com.trackysat.kafka.domain.vmson.VmsonCon;
+import com.trackysat.kafka.repository.*;
 import com.trackysat.kafka.service.dto.StatusDTO;
 import com.trackysat.kafka.service.mapper.DeviceMapper;
 import com.trackysat.kafka.service.mapper.LastGpsPositionMapper;
+import com.trackysat.kafka.service.mapper.LastTellTaleInfoMapper;
 import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
 import com.trackysat.kafka.utils.JSONUtils;
 import com.trackysat.kafka.utils.cache.AbstractCache;
@@ -20,6 +17,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -63,6 +61,12 @@ public class CassandraConsumerService {
 
     private final AbstractCache<String, LastGpsPosition> lastGpsPositionAbstractCache;
 
+    private final LastTellTaleInfoRepository lastTellTaleInfoRepository;
+
+    private final LastTellTaleInfoMapper lastTellTaleInfoMapper;
+
+    private final TellTaleInfoRepository tellTaleInfoRepository;
+
     private final AtomicBoolean isEnabled = new AtomicBoolean(true);
     private final AtomicInteger eventCounter = new AtomicInteger(0);
     private final AtomicInteger errorCounter = new AtomicInteger(0);
@@ -77,7 +81,10 @@ public class CassandraConsumerService {
         DeviceRepository deviceRepository,
         LastGpsPositionMapper lastGpsPositionMapper,
         LastGpsPositionRepository lastGpsPositionRepository,
-        AbstractCache<String, LastGpsPosition> lastGpsPositionAbstractCache
+        AbstractCache<String, LastGpsPosition> lastGpsPositionAbstractCache,
+        LastTellTaleInfoRepository lastTellTaleInfoRepository,
+        LastTellTaleInfoMapper lastTellTaleInfoMapper,
+        TellTaleInfoRepository tellTaleInfoRepository
     ) {
         this.deadLetterQueueRepository = deadLetterQueueRepository;
         this.trackyEventRepository = trackyEventRepository;
@@ -87,6 +94,9 @@ public class CassandraConsumerService {
         this.lastGpsPositionMapper = lastGpsPositionMapper;
         this.lastGpsPositionRepository = lastGpsPositionRepository;
         this.lastGpsPositionAbstractCache = lastGpsPositionAbstractCache;
+        this.lastTellTaleInfoRepository = lastTellTaleInfoRepository;
+        this.lastTellTaleInfoMapper = lastTellTaleInfoMapper;
+        this.tellTaleInfoRepository = tellTaleInfoRepository;
     }
 
     @KafkaListener(
@@ -131,18 +141,64 @@ public class CassandraConsumerService {
             TrackyEvent event = trackysatEventMapper.fromVmson(record);
             trackyEventRepository.save(event);
             deviceRepository.save(deviceMapper.fromVmson(record));
+            log.debug("Event saved. device: {} date: {}", event.getDeviceId(), event.getCreatedDate());
 
             /* cache insert of the last position received */
             var position = lastGpsPositionMapper.fromVmson(record);
+            if (position == null) return;
+
+            var isRecent = new AtomicBoolean(true);
             lastGpsPositionAbstractCache.putIf(
                 position.getDeviceId(),
                 position,
                 key -> lastGpsPositionRepository.findById(key).orElse(null),
-                (old, newPos) -> old.getEventPositionDate().compareTo(newPos.getEventPositionDate()) < 0
+                (old, newPos) -> {
+                    isRecent.set(old.getEventPositionDate().compareTo(newPos.getEventPositionDate()) < 0);
+                    return isRecent.get();
+                }
             );
 
-            log.debug("Event saved. device: {} date: {}", event.getDeviceId(), event.getCreatedDate());
+            if (isRecent.get()) {
+                var infoList = lastTellTaleInfoMapper.getLastTellTaleInfoListFromLastPosition(position);
+                infoList.forEach(lastTellTaleInfoRepository::save);
+            }
+
+            saveTellTaleInfo(event);
         }
+    }
+
+    public void saveTellTaleInfo(TrackyEvent event) throws JsonProcessingException {
+        var conList = JSONUtils.toJson(event.getCon(), new TypeReference<List<VmsonCon>>() {});
+
+        if (conList.isEmpty()) return;
+
+        conList
+            .parallelStream()
+            .forEach(con -> {
+                con
+                    .getSen()
+                    .parallelStream()
+                    .filter(sen ->
+                        sen.getSrc().equals(LastTellTaleInfoMapper.SRC_CAN) && sen.getTyp().equals(LastTellTaleInfoMapper.TYPE_TELLTALE)
+                    )
+                    .forEach(sen -> {
+                        log.debug("creating tellTaleInfo for sen {}", sen);
+                        try {
+                            var tellTaleInfo = new TellTaleInfo();
+                            tellTaleInfo.setIid(sen.getIid());
+                            tellTaleInfo.setState(sen.getVal());
+                            tellTaleInfo.setCreatedDate(Instant.now());
+                            tellTaleInfo.setEventCreatedDate(con.getEts().getTst());
+                            tellTaleInfo.setEts(JSONUtils.toString(con.getEts()));
+                            tellTaleInfo.setSen(JSONUtils.toString(sen));
+                            tellTaleInfo.setDeviceId(event.getDeviceId());
+                            tellTaleInfoRepository.save(tellTaleInfo);
+                        } catch (JsonProcessingException ex) {
+                            processError("Exception during TellTaleInfo creation", ex.getMessage());
+                            log.error("Exception during json processing: {}", ex.getMessage());
+                        }
+                    });
+            });
     }
 
     private void processError(String msg, String errorMessage) {
