@@ -16,12 +16,12 @@ public class LastGpsPositionMapper {
         var conList = event.getVmson().getCon();
         if (conList.isEmpty()) return null;
         conList.sort(Collections.reverseOrder(Comparator.comparing(a -> a.getEts().getTst())));
-        var optionalPosition = conList.stream().findFirst();
-        if (optionalPosition.isEmpty()) return null;
-        var lastPosition = optionalPosition.get();
+        var optionalVmsonCon = conList.stream().findFirst();
+        if (optionalVmsonCon.isEmpty()) return null;
+        var vmsonCon = optionalVmsonCon.get();
         var position = new LastGpsPosition();
-        position.setGpsPosition(JSONUtils.toString(lastPosition));
-        position.setEventPositionDate(lastPosition.getEts().getTst());
+        position.setGpsPosition(JSONUtils.toString(vmsonCon));
+        position.setEventPositionDate(vmsonCon.getEts().getTst());
         position.setDeviceId(event.getVmson().getOri().getUid());
         return position;
     }
