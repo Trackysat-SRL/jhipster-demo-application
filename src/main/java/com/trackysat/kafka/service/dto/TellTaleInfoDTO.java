@@ -10,16 +10,34 @@ public class TellTaleInfoDTO {
     private String sen;
     private Instant createdDate;
     private Instant eventCreatedDate;
+    private String state;
 
     public TellTaleInfoDTO() {}
 
-    public TellTaleInfoDTO(String deviceId, String iid, String ets, String sen, Instant createdDate, Instant eventCreatedDate) {
+    public TellTaleInfoDTO(
+        String deviceId,
+        String iid,
+        String ets,
+        String sen,
+        Instant createdDate,
+        Instant eventCreatedDate,
+        String state
+    ) {
         this.deviceId = deviceId;
         this.iid = iid;
         this.ets = ets;
         this.sen = sen;
         this.createdDate = createdDate;
         this.eventCreatedDate = eventCreatedDate;
+        this.state = state;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
     }
 
     public String getDeviceId() {

@@ -2,6 +2,7 @@ package com.trackysat.kafka.repository;
 
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.api.core.PagingIterable;
 import com.datastax.oss.driver.api.core.cql.BatchStatement;
 import com.datastax.oss.driver.api.core.cql.BatchStatementBuilder;
@@ -18,6 +19,7 @@ import javax.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.cassandra.CassandraProperties;
+import org.springframework.data.cassandra.repository.Consistency;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -45,6 +47,14 @@ public class LastTellTaleInfoRepository {
     // -- CRUD -- //
     public Optional<LastTellTaleInfo> findById(String deviceId, String iid) {
         return lastTellTaleInfoDao.get(deviceId, iid);
+    }
+
+    public List<LastTellTaleInfo> findByDeviceId(String deviceId) {
+        return lastTellTaleInfoDao.findByDeviceId(deviceId).all();
+    }
+
+    public List<LastTellTaleInfo> findByDeviceIdIn(List<String> devices) {
+        return lastTellTaleInfoDao.findByDeviceIn(devices).all();
     }
 
     public List<LastTellTaleInfo> findAll() {
@@ -83,6 +93,12 @@ interface LastTellTaleInfoDao {
 
     @Delete
     BoundStatement deleteQuery(LastTellTaleInfo lastTellTaleInfo);
+
+    @Query("select * from last_tell_tale_info where device_id = :deviceId")
+    PagingIterable<LastTellTaleInfo> findByDeviceId(String deviceId);
+
+    @Query("select * from last_tell_tale_info where device_id in :devices")
+    PagingIterable<LastTellTaleInfo> findByDeviceIn(List<String> devices);
 }
 
 @Mapper

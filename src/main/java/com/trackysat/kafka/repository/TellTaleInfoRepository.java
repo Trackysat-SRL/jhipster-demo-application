@@ -47,6 +47,10 @@ public class TellTaleInfoRepository {
         return tellTaleInfoDao.get(deviceId, createdDate);
     }
 
+    public List<TellTaleInfo> findByDeviceIdAndRangeDate(String deviceId, Instant from, Instant to) {
+        return tellTaleInfoDao.findByDeviceIdAndRangeDate(deviceId, from, to).all();
+    }
+
     public List<TellTaleInfo> findAll() {
         return tellTaleInfoDao.findAll().all();
     }
@@ -83,6 +87,11 @@ interface TellTaleInfoDao {
 
     @Delete
     BoundStatement deleteQuery(TellTaleInfo tellTaleInfo);
+
+    @Query(
+        "select * from tell_tale_info where device_id = :deviceId and event_created_date >= :fromDate and event_created_date <= :toDate order by event_created_date desc"
+    )
+    PagingIterable<TellTaleInfo> findByDeviceIdAndRangeDate(String deviceId, Instant fromDate, Instant toDate);
 }
 
 @Mapper

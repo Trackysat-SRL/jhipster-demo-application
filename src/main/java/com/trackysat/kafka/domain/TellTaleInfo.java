@@ -18,7 +18,7 @@ public class TellTaleInfo implements Serializable {
     private String deviceId;
 
     @ClusteringColumn
-    private Instant createdDate = Instant.now();
+    private Instant eventCreatedDate;
 
     @ClusteringColumn(value = 1)
     private String iid;
@@ -29,7 +29,7 @@ public class TellTaleInfo implements Serializable {
 
     private String sen;
 
-    private Instant eventCreatedDate;
+    private Instant createdDate = Instant.now();
 
     public String getDeviceId() {
         return deviceId;

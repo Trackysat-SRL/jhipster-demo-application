@@ -51,7 +51,8 @@ public class TellTaleInfoMapper {
             entity.getEts(),
             entity.getSen(),
             entity.getCreatedDate(),
-            entity.getEventCreatedDate()
+            entity.getEventCreatedDate(),
+            entity.getState()
         );
     }
 
