@@ -6,10 +6,7 @@ import com.trackysat.kafka.domain.*;
 import com.trackysat.kafka.domain.vmson.VmsonCon;
 import com.trackysat.kafka.repository.*;
 import com.trackysat.kafka.service.dto.StatusDTO;
-import com.trackysat.kafka.service.mapper.DeviceMapper;
-import com.trackysat.kafka.service.mapper.LastGpsPositionMapper;
-import com.trackysat.kafka.service.mapper.LastTellTaleInfoMapper;
-import com.trackysat.kafka.service.mapper.TrackysatEventMapper;
+import com.trackysat.kafka.service.mapper.*;
 import com.trackysat.kafka.utils.JSONUtils;
 import com.trackysat.kafka.utils.cache.AbstractCache;
 import java.nio.charset.StandardCharsets;
@@ -67,6 +64,8 @@ public class CassandraConsumerService {
 
     private final TellTaleInfoRepository tellTaleInfoRepository;
 
+    private final TellTaleInfoMapper tellTaleInfoMapper;
+
     private final AtomicBoolean isEnabled = new AtomicBoolean(true);
     private final AtomicInteger eventCounter = new AtomicInteger(0);
     private final AtomicInteger errorCounter = new AtomicInteger(0);
@@ -84,7 +83,8 @@ public class CassandraConsumerService {
         AbstractCache<String, LastGpsPosition> lastGpsPositionAbstractCache,
         LastTellTaleInfoRepository lastTellTaleInfoRepository,
         LastTellTaleInfoMapper lastTellTaleInfoMapper,
-        TellTaleInfoRepository tellTaleInfoRepository
+        TellTaleInfoRepository tellTaleInfoRepository,
+        TellTaleInfoMapper tellTaleInfoMapper
     ) {
         this.deadLetterQueueRepository = deadLetterQueueRepository;
         this.trackyEventRepository = trackyEventRepository;
@@ -97,6 +97,7 @@ public class CassandraConsumerService {
         this.lastTellTaleInfoRepository = lastTellTaleInfoRepository;
         this.lastTellTaleInfoMapper = lastTellTaleInfoMapper;
         this.tellTaleInfoRepository = tellTaleInfoRepository;
+        this.tellTaleInfoMapper = tellTaleInfoMapper;
     }
 
     @KafkaListener(
@@ -163,42 +164,8 @@ public class CassandraConsumerService {
                 infoList.forEach(lastTellTaleInfoRepository::save);
             }
 
-            saveTellTaleInfo(event);
+            tellTaleInfoMapper.fromVmson(record).parallelStream().forEach(tellTaleInfoRepository::save);
         }
-    }
-
-    public void saveTellTaleInfo(TrackyEvent event) throws JsonProcessingException {
-        var conList = JSONUtils.toJson(event.getCon(), new TypeReference<List<VmsonCon>>() {});
-
-        if (conList.isEmpty()) return;
-
-        conList
-            .parallelStream()
-            .forEach(con -> {
-                con
-                    .getSen()
-                    .parallelStream()
-                    .filter(sen ->
-                        sen.getSrc().equals(LastTellTaleInfoMapper.SRC_CAN) && sen.getTyp().equals(LastTellTaleInfoMapper.TYPE_TELLTALE)
-                    )
-                    .forEach(sen -> {
-                        log.debug("creating tellTaleInfo for sen {}", sen);
-                        try {
-                            var tellTaleInfo = new TellTaleInfo();
-                            tellTaleInfo.setIid(sen.getIid());
-                            tellTaleInfo.setState(sen.getVal());
-                            tellTaleInfo.setCreatedDate(Instant.now());
-                            tellTaleInfo.setEventCreatedDate(con.getEts().getTst());
-                            tellTaleInfo.setEts(JSONUtils.toString(con.getEts()));
-                            tellTaleInfo.setSen(JSONUtils.toString(sen));
-                            tellTaleInfo.setDeviceId(event.getDeviceId());
-                            tellTaleInfoRepository.save(tellTaleInfo);
-                        } catch (JsonProcessingException ex) {
-                            processError("Exception during TellTaleInfo creation", ex.getMessage());
-                            log.error("Exception during json processing: {}", ex.getMessage());
-                        }
-                    });
-            });
     }
 
     private void processError(String msg, String errorMessage) {
