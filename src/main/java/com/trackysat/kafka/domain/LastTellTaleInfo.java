@@ -24,6 +24,25 @@ public class LastTellTaleInfo implements Serializable {
 
     private Instant eventCreatedDate;
 
+    private Double lat;
+    private Double lon;
+
+    public Double getLat() {
+        return lat;
+    }
+
+    public void setLat(Double lat) {
+        this.lat = lat;
+    }
+
+    public Double getLon() {
+        return lon;
+    }
+
+    public void setLon(Double lon) {
+        this.lon = lon;
+    }
+
     public String getDeviceId() {
         return deviceId;
     }
@@ -70,6 +89,8 @@ public class LastTellTaleInfo implements Serializable {
             ", iid='" + iid + '\'' +
             ", eventCreatedDate='" + eventCreatedDate + '\'' +
             ", state='" + state + '\'' +
+            ", lat='" + lat + '\'' +
+            ", lon='" + lon + '\'' +
             '}';
     }
 }

@@ -1,6 +1,5 @@
 package com.trackysat.kafka.domain;
 
-import com.datastax.oss.driver.api.mapper.annotations.ClusteringColumn;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
 import com.datastax.oss.driver.api.mapper.annotations.NamingStrategy;
 import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
@@ -22,12 +21,34 @@ public class LastGpsPosition implements Serializable {
 
     String gpsPosition;
 
+    Double lat;
+
+    Double lon;
+
     public LastGpsPosition() {}
 
-    public LastGpsPosition(String deviceId, Instant eventPositionDate, String gpsPosition) {
+    public LastGpsPosition(String deviceId, Instant eventPositionDate, String gpsPosition, Double lat, Double lon) {
         this.deviceId = deviceId;
         this.eventPositionDate = eventPositionDate;
         this.gpsPosition = gpsPosition;
+        this.lat = lat;
+        this.lon = lon;
+    }
+
+    public Double getLat() {
+        return lat;
+    }
+
+    public void setLat(Double lat) {
+        this.lat = lat;
+    }
+
+    public Double getLon() {
+        return lon;
+    }
+
+    public void setLon(Double lon) {
+        this.lon = lon;
     }
 
     public String getGpsPosition() {
@@ -61,13 +82,15 @@ public class LastGpsPosition implements Serializable {
         var that = (LastGpsPosition) o;
         return (
             (Objects.equals(getDeviceId(), that.getDeviceId()) && Objects.equals(getEventPositionDate(), that.getEventPositionDate())) &&
-            Objects.equals(getGpsPosition(), that.getGpsPosition())
+            Objects.equals(getGpsPosition(), that.getGpsPosition()) &&
+            Objects.equals(getLat(), that.getLat()) &&
+            Objects.equals(getLon(), that.getLon())
         );
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getDeviceId(), getEventPositionDate(), getGpsPosition());
+        return Objects.hash(getDeviceId(), getEventPositionDate(), getGpsPosition(), getLat(), getLon());
     }
 
     @Override
@@ -82,7 +105,12 @@ public class LastGpsPosition implements Serializable {
             ", gpsPosition='" +
             gpsPosition +
             '\'' +
-            '}'
+            ", lat='" +
+            lat +
+            "'" +
+            ", lon='" +
+            lon +
+            "' }"
         );
     }
 }

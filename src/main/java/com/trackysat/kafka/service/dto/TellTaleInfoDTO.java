@@ -11,6 +11,8 @@ public class TellTaleInfoDTO {
     private Instant createdDate;
     private Instant eventCreatedDate;
     private String state;
+    private Double lat;
+    private Double lon;
 
     public TellTaleInfoDTO() {}
 
@@ -21,7 +23,9 @@ public class TellTaleInfoDTO {
         String sen,
         Instant createdDate,
         Instant eventCreatedDate,
-        String state
+        String state,
+        Double lat,
+        Double lon
     ) {
         this.deviceId = deviceId;
         this.iid = iid;
@@ -30,6 +34,8 @@ public class TellTaleInfoDTO {
         this.createdDate = createdDate;
         this.eventCreatedDate = eventCreatedDate;
         this.state = state;
+        this.lat = lat;
+        this.lon = lon;
     }
 
     public String getState() {
@@ -86,5 +92,21 @@ public class TellTaleInfoDTO {
 
     public void setEventCreatedDate(Instant eventCreatedDate) {
         this.eventCreatedDate = eventCreatedDate;
+    }
+
+    public Double getLat() {
+        return lat;
+    }
+
+    public void setLat(Double lat) {
+        this.lat = lat;
+    }
+
+    public Double getLon() {
+        return lon;
+    }
+
+    public void setLon(Double lon) {
+        this.lon = lon;
     }
 }

@@ -31,6 +31,10 @@ public class TellTaleInfo implements Serializable {
 
     private Instant createdDate = Instant.now();
 
+    private Double lat;
+
+    private Double lon;
+
     public String getDeviceId() {
         return deviceId;
     }
@@ -87,6 +91,22 @@ public class TellTaleInfo implements Serializable {
         this.eventCreatedDate = eventCreatedDate;
     }
 
+    public Double getLat() {
+        return lat;
+    }
+
+    public void setLat(Double lat) {
+        this.lat = lat;
+    }
+
+    public Double getLon() {
+        return lon;
+    }
+
+    public void setLon(Double lon) {
+        this.lon = lon;
+    }
+
     @Override
     public int hashCode() {
         // see https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
@@ -104,6 +124,8 @@ public class TellTaleInfo implements Serializable {
             ", eventCreatedDate='" + eventCreatedDate + '\'' +
             ", createdDate='" + createdDate + '\'' +
             ", state='" + state + '\'' +
+            ", lat='" + lat + '\'' +
+            ", lon='" + lon + '\'' +
             '}';
     }
 }

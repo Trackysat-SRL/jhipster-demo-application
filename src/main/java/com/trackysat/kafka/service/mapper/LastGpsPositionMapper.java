@@ -23,10 +23,18 @@ public class LastGpsPositionMapper {
         position.setGpsPosition(JSONUtils.toString(vmsonCon));
         position.setEventPositionDate(vmsonCon.getEts().getTst());
         position.setDeviceId(event.getVmson().getOri().getUid());
+        position.setLat(vmsonCon.getSat().getLat());
+        position.setLon(vmsonCon.getSat().getLon());
         return position;
     }
 
     public LastGpsPositionDTO toDto(LastGpsPosition entity) {
-        return new LastGpsPositionDTO(entity.getDeviceId(), entity.getEventPositionDate(), entity.getGpsPosition());
+        return new LastGpsPositionDTO(
+            entity.getDeviceId(),
+            entity.getEventPositionDate(),
+            entity.getGpsPosition(),
+            entity.getLon(),
+            entity.getLat()
+        );
     }
 }

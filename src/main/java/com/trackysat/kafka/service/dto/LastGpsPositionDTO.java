@@ -9,13 +9,33 @@ public class LastGpsPositionDTO {
     private String deviceId;
     private Instant eventPositionDate;
     private String gpsPosition;
+    private Double lon;
+    private Double lat;
 
     public LastGpsPositionDTO() {}
 
-    public LastGpsPositionDTO(String deviceId, Instant eventPositionDate, String gpsPosition) {
+    public LastGpsPositionDTO(String deviceId, Instant eventPositionDate, String gpsPosition, Double lon, Double lat) {
         this.deviceId = deviceId;
         this.eventPositionDate = eventPositionDate;
         this.gpsPosition = gpsPosition;
+        this.lon = lon;
+        this.lat = lat;
+    }
+
+    public Double getLon() {
+        return lon;
+    }
+
+    public void setLon(Double lon) {
+        this.lon = lon;
+    }
+
+    public Double getLat() {
+        return lat;
+    }
+
+    public void setLat(Double lat) {
+        this.lat = lat;
     }
 
     public String getDeviceId() {

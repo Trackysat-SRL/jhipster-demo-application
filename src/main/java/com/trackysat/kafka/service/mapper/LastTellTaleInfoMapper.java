@@ -28,13 +28,22 @@ public class LastTellTaleInfoMapper {
                 lastTellTaleInfo.setIid(sen.getIid());
                 lastTellTaleInfo.setState(sen.getVal());
                 lastTellTaleInfo.setEventCreatedDate(con.getEts().getTst());
+                lastTellTaleInfo.setLat(lastTellTaleInfo.getLat());
+                lastTellTaleInfo.setLon(lastTellTaleInfo.getLon());
                 return lastTellTaleInfo;
             })
             .collect(Collectors.toList());
     }
 
     public LastTellTaleInfoDTO toDto(LastTellTaleInfo entity) {
-        return new LastTellTaleInfoDTO(entity.getDeviceId(), entity.getIid(), entity.getState(), entity.getEventCreatedDate());
+        return new LastTellTaleInfoDTO(
+            entity.getDeviceId(),
+            entity.getIid(),
+            entity.getState(),
+            entity.getEventCreatedDate(),
+            entity.getLon(),
+            entity.getLat()
+        );
     }
 
     public List<LastTellTaleInfoDTO> toDto(List<LastTellTaleInfo> entities) {

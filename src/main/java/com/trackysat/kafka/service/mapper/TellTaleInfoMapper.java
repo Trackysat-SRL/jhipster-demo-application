@@ -30,13 +30,17 @@ public class TellTaleInfoMapper {
                     .map(sen ->
                         propagate(() -> {
                             var tellTaleInfo = new TellTaleInfo();
+                            var ets = con.getEts();
+                            var position = con.getSat();
                             tellTaleInfo.setIid(sen.getIid());
                             tellTaleInfo.setState(sen.getVal());
                             tellTaleInfo.setCreatedDate(Instant.now());
-                            tellTaleInfo.setEventCreatedDate(con.getEts().getTst());
-                            tellTaleInfo.setEts(JSONUtils.toString(con.getEts()));
+                            tellTaleInfo.setEventCreatedDate(ets.getTst());
+                            tellTaleInfo.setEts(JSONUtils.toString(ets));
                             tellTaleInfo.setSen(JSONUtils.toString(sen));
                             tellTaleInfo.setDeviceId(deviceId);
+                            tellTaleInfo.setLat(position.getLat());
+                            tellTaleInfo.setLon(position.getLon());
                             return tellTaleInfo;
                         })
                     )
@@ -52,7 +56,9 @@ public class TellTaleInfoMapper {
             entity.getSen(),
             entity.getCreatedDate(),
             entity.getEventCreatedDate(),
-            entity.getState()
+            entity.getState(),
+            entity.getLat(),
+            entity.getLon()
         );
     }
 
