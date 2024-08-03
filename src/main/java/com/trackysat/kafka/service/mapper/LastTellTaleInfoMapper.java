@@ -28,8 +28,8 @@ public class LastTellTaleInfoMapper {
                 lastTellTaleInfo.setIid(sen.getIid());
                 lastTellTaleInfo.setState(sen.getVal());
                 lastTellTaleInfo.setEventCreatedDate(con.getEts().getTst());
-                lastTellTaleInfo.setLat(lastTellTaleInfo.getLat());
-                lastTellTaleInfo.setLon(lastTellTaleInfo.getLon());
+                lastTellTaleInfo.setLat(lastGpsPosition.getLat());
+                lastTellTaleInfo.setLon(lastGpsPosition.getLon());
                 return lastTellTaleInfo;
             })
             .collect(Collectors.toList());
