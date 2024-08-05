@@ -70,7 +70,7 @@ public class TellTaleInfoService {
 
     public Map<String, List<LastTellTaleInfoDTO>> getLastTellTaleInfoListByDevices(List<String> devices, boolean filterOffValues) {
         log.debug("getLastTellTaleInfoListByDevices - devices size {}", devices.size());
-        return lastTellTaleInfoRepository
+        Map<String, List<LastTellTaleInfoDTO>> map = lastTellTaleInfoRepository
             .findByDeviceIdIn(devices)
             .stream()
             .filter(info -> !filterOffValues || !info.getState().equals("OFF"))
@@ -89,5 +89,11 @@ public class TellTaleInfoService {
                     }
                 )
             );
+
+        devices.forEach(key -> {
+            if (!map.containsKey(key)) map.put(key, new ArrayList<>());
+        });
+
+        return map;
     }
 }
