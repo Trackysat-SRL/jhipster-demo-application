@@ -32,7 +32,7 @@ public class LastGpsPositionService {
     }
 
     public LastGpsPositionDTO getLastGpsPositionByDeviceId(String deviceId) {
-        var position = lastGpsPositionAbstractCache.getOrElse(deviceId, key -> lastGpsPositionRepository.findById(key).orElse(null));
+        var position = lastGpsPositionAbstractCache.getOrElse(deviceId, key -> lastGpsPositionRepository.findById(key).orElse(null), true);
         if (position == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No position found for device " + deviceId);
         return lastGpsPositionMapper.toDto(position);
     }

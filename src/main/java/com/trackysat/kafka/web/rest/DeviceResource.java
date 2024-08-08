@@ -8,6 +8,7 @@ import com.trackysat.kafka.domain.aggregations.SensorStatsDTO;
 import com.trackysat.kafka.service.AggregationDelegatorService;
 import com.trackysat.kafka.service.DeviceService;
 import com.trackysat.kafka.service.dto.DailyAggregationDTO;
+import com.trackysat.kafka.utils.cache.AbstractCache;
 import com.trackysat.kafka.web.rest.dto.BulkDeviceRequestDTO;
 import com.trackysat.kafka.web.rest.dto.DeviceTimeZoneDTO;
 import java.time.Duration;
@@ -47,9 +48,16 @@ public class DeviceResource {
 
     private final AggregationDelegatorService aggregationDelegatorService;
 
-    public DeviceResource(DeviceService deviceService, AggregationDelegatorService aggregationDelegatorService) {
+    private final AbstractCache<String, List<SensorStatsDTO>> monthlyAggregationCache;
+
+    public DeviceResource(
+        DeviceService deviceService,
+        AggregationDelegatorService aggregationDelegatorService,
+        AbstractCache<String, List<SensorStatsDTO>> monthlyAggregationCache
+    ) {
         this.deviceService = deviceService;
         this.aggregationDelegatorService = aggregationDelegatorService;
+        this.monthlyAggregationCache = monthlyAggregationCache;
     }
 
     @GetMapping
@@ -335,31 +343,36 @@ public class DeviceResource {
             .collect(
                 Collectors.toMap(
                     Function.identity(),
-                    id -> {
-                        try {
-                            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(
-                                id,
-                                fromDate,
-                                toDate
-                            );
-                            List<SensorStatsDTO> stats = sensors
-                                .entrySet()
-                                .stream()
-                                .filter(e ->
-                                    e.getKey().toLowerCase().contains(Constants.SENSOR_TOT_VEHICLE_DIST.toLowerCase()) &&
-                                    unitMisure.toLowerCase().equals(e.getValue().getMeasureUnit())
-                                )
-                                .map(Map.Entry::getValue)
-                                .collect(Collectors.toList());
+                    id ->
+                        monthlyAggregationCache.getOrElse(
+                            id,
+                            key -> {
+                                try {
+                                    Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(
+                                        key,
+                                        fromDate,
+                                        toDate
+                                    );
+                                    List<SensorStatsDTO> stats = sensors
+                                        .entrySet()
+                                        .stream()
+                                        .filter(e ->
+                                            e.getKey().toLowerCase().contains(Constants.SENSOR_TOT_VEHICLE_DIST.toLowerCase()) &&
+                                            unitMisure.toLowerCase().equals(e.getValue().getMeasureUnit())
+                                        )
+                                        .map(Map.Entry::getValue)
+                                        .collect(Collectors.toList());
 
-                            if (!includeValues) {
-                                stats.forEach(s -> s.setValues(null));
-                            }
-                            return stats;
-                        } catch (JsonProcessingException e) {
-                            return Collections.emptyList();
-                        }
-                    }
+                                    if (!includeValues) {
+                                        stats.forEach(s -> s.setValues(null));
+                                    }
+                                    return stats;
+                                } catch (JsonProcessingException e) {
+                                    return Collections.emptyList();
+                                }
+                            },
+                            false
+                        )
                 )
             );
         return ResponseEntity.ok().body(allDevicesSensors);
@@ -386,28 +399,33 @@ public class DeviceResource {
             .collect(
                 Collectors.toMap(
                     Function.identity(),
-                    id -> {
-                        try {
-                            Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(
-                                id,
-                                fromDate,
-                                toDate
-                            );
-                            List<SensorStatsDTO> stats = sensors
-                                .entrySet()
-                                .stream()
-                                .filter(e -> e.getKey().toLowerCase().contains(Constants.SENSOR_TOT_FUEL.toLowerCase()))
-                                .map(Map.Entry::getValue)
-                                .collect(Collectors.toList());
+                    id ->
+                        monthlyAggregationCache.getOrElse(
+                            id,
+                            key -> {
+                                try {
+                                    Map<String, SensorStatsDTO> sensors = aggregationDelegatorService.getSensorsByDeviceIdAndDateRange(
+                                        key,
+                                        fromDate,
+                                        toDate
+                                    );
+                                    List<SensorStatsDTO> stats = sensors
+                                        .entrySet()
+                                        .stream()
+                                        .filter(e -> e.getKey().toLowerCase().contains(Constants.SENSOR_TOT_FUEL.toLowerCase()))
+                                        .map(Map.Entry::getValue)
+                                        .collect(Collectors.toList());
 
-                            if (!includeValues) {
-                                stats.forEach(s -> s.setValues(null));
-                            }
-                            return stats;
-                        } catch (JsonProcessingException e) {
-                            return Collections.emptyList();
-                        }
-                    }
+                                    if (!includeValues) {
+                                        stats.forEach(s -> s.setValues(null));
+                                    }
+                                    return stats;
+                                } catch (JsonProcessingException e) {
+                                    return Collections.emptyList();
+                                }
+                            },
+                            false
+                        )
                 )
             );
         return ResponseEntity.ok().body(allDevicesSensors);

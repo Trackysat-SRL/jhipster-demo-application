@@ -2,21 +2,24 @@ package com.trackysat.kafka.repository;
 
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.api.core.PagingIterable;
 import com.datastax.oss.driver.api.core.cql.*;
 import com.datastax.oss.driver.api.mapper.annotations.*;
+import com.trackysat.kafka.config.cache.CacheManagerConfiguration;
 import com.trackysat.kafka.domain.MonthlyAggregation;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import javax.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.cassandra.CassandraProperties;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.cassandra.repository.Consistency;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -35,7 +38,7 @@ public class MonthlyAggregationRepository {
 
     private final PreparedStatement findOne;
 
-    private final PreparedStatement findAllByDeviceIdAndDates;
+    //private final PreparedStatement findAllByDeviceIdAndDates;
 
     public MonthlyAggregationRepository(CqlSession session, Validator validator, CassandraProperties cassandraProperties) {
         this.session = session;
@@ -45,21 +48,23 @@ public class MonthlyAggregationRepository {
             monthlyAggregationTokenMapper.monthlyAggregationTokenDao(CqlIdentifier.fromCql(cassandraProperties.getKeyspaceName()));
 
         findOne = session.prepare("SELECT device_id, aggregated_date " + "FROM monthly_aggregation limit 1");
-        findAllByDeviceIdAndDates =
+        /*findAllByDeviceIdAndDates =
             session.prepare(
                 "SELECT * FROM monthly_aggregation " +
-                "WHERE device_id = :device_id and aggregated_date >= :from_date and aggregated_date < :to_date limit 100"
-            );
+                    "WHERE device_id = :device_id and aggregated_date >= :from_date and aggregated_date < :to_date limit 100"
+            );*/
     }
 
+    //@Cacheable(value = CacheManagerConfiguration.MONTHLY_AGGREGATION_CACHE, key = "#deviceId")
     public List<MonthlyAggregation> findOneByDeviceIdAndDateRange(String deviceId, Instant dateFrom, Instant dateTo) {
-        BoundStatement stmt = findAllByDeviceIdAndDates
+        /*BoundStatement stmt = findAllByDeviceIdAndDates
             .bind()
             .setString("device_id", deviceId)
             .setInstant("from_date", dateFrom)
             .setInstant("to_date", dateTo);
         ResultSet rs = session.execute(stmt);
-        return rs.all().stream().map(this::fromRow).collect(Collectors.toList());
+        return rs.all().stream().map(this::fromRow).collect(Collectors.toList());*/
+        return monthlyAggregationDao.getByRangeOfDates(deviceId, dateFrom, dateTo).all();
     }
 
     // -- CRUD -- //
@@ -135,6 +140,12 @@ interface MonthlyAggregationDao {
 
     @Update(customWhereClause = "device_id = :deviceId and aggregated_date = :aggregatedDate")
     BoundStatement updateQuery(MonthlyAggregation monthlyAggregation, String deviceId, Instant aggregatedDate);
+
+    @Consistency(DefaultConsistencyLevel.LOCAL_ONE)
+    @Query(
+        "SELECT * FROM monthly_aggregation WHERE device_id = :deviceId and aggregated_date >= :fromDate and aggregated_date < :toDate limit 100"
+    )
+    PagingIterable<MonthlyAggregation> getByRangeOfDates(String deviceId, Instant fromDate, Instant toDate);
 }
 
 @Mapper

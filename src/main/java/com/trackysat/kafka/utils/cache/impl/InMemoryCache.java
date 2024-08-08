@@ -84,14 +84,17 @@ public class InMemoryCache<KEY, T> extends AbstractCache<KEY, T> {
 
     @Override
     protected void checkExpiredRecords() {
-        withLock(() -> {
-            if (internalCache.isEmpty()) return;
-            logger.debug("[{}] - checkExpiredRecords", cacheName);
-            List<Runnable> operations = new ArrayList<>();
-            this.internalCache.forEach((k, v) -> operations.add(() -> checkRecordExpiration(k, v)));
-            /* to execute in parallel */
-            operations.parallelStream().forEach(Runnable::run);
-        });
+        withLock(
+            () -> {
+                if (internalCache.isEmpty()) return;
+                logger.debug("[{}] - checkExpiredRecords", cacheName);
+                List<Runnable> operations = new ArrayList<>();
+                this.internalCache.forEach((k, v) -> operations.add(() -> checkRecordExpiration(k, v)));
+                /* to execute in parallel */
+                operations.parallelStream().forEach(Runnable::run);
+            },
+            true
+        );
     }
 
     @Override

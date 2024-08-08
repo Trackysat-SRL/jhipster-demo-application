@@ -20,6 +20,9 @@ spring:
   config:
     activate:
       on-profile: '!api-docs'
+  # comment to enable cache
+  cache:
+    type: none
 springdoc:
   api-docs:
     enabled: false

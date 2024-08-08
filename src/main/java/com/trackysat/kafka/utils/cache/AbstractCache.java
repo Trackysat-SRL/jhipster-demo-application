@@ -22,7 +22,7 @@ public abstract class AbstractCache<KEY, T> {
     protected final long recordIdleTime;
     protected final ScheduledFuture<?> onExpirationScheduledTask;
     protected final String cacheName;
-    protected final Executor backOffExecutor;
+    protected Executor backOffExecutor;
     private final Logger logger = LoggerFactory.getLogger(AbstractCache.class);
     protected final boolean processOnlyUpdatedOrNewRecords;
 
@@ -50,24 +50,27 @@ public abstract class AbstractCache<KEY, T> {
                     TimeUnit.MILLISECONDS
                 );
 
-        this.backOffExecutor =
-            command ->
-                new Thread(() -> {
-                    BackOffStrategy s = backOffStrategy.copy();
-                    while (s.getAttempts() < s.getMaxAttempts()) {
-                        logger.debug("Attempt number [{}]", s.getAttempts() + 1);
-                        try {
-                            Thread.sleep(s.getInitialDelayInMillis());
-                            command.run();
-                            return;
-                        } catch (Exception e) {
-                            s.setAttempts(s.getAttempts() + 1);
-                            s.setInitialDelayInMillis(Math.min(s.getInitialDelayInMillis() + s.getDelay(), s.getMaxDelayInMillis()));
+        if (backOffStrategy != null) {
+            this.backOffExecutor =
+                command ->
+                    new Thread(() -> {
+                        BackOffStrategy s = backOffStrategy.copy();
+                        while (s.getAttempts() < s.getMaxAttempts()) {
+                            logger.debug("Attempt number [{}]", s.getAttempts() + 1);
+                            try {
+                                Thread.sleep(s.getInitialDelayInMillis());
+                                command.run();
+                                return;
+                            } catch (Exception e) {
+                                s.setAttempts(s.getAttempts() + 1);
+                                s.setInitialDelayInMillis(Math.min(s.getInitialDelayInMillis() + s.getDelay(), s.getMaxDelayInMillis()));
+                            }
                         }
-                    }
-                    logger.debug("Exhausted all attempts");
-                })
-                    .start();
+                        logger.debug("Exhausted all attempts");
+                    })
+                        .start();
+        }
+
         this.processOnlyUpdatedOrNewRecords = processOnlyUpdatedOrNewRecords;
     }
 
@@ -75,10 +78,15 @@ public abstract class AbstractCache<KEY, T> {
         return cacheName;
     }
 
-    protected void withLock(Runnable r) {
-        synchronized (cacheName) {
-            r.run();
+    protected void withLock(Runnable r, boolean active) {
+        if (active) {
+            synchronized (cacheName) {
+                r.run();
+            }
+            return;
         }
+
+        r.run();
     }
 
     protected abstract void flush();
@@ -96,18 +104,30 @@ public abstract class AbstractCache<KEY, T> {
      * @param newObjectProvider the object provider if record is not found.
      * @return the object stored with the provided key.
      */
-    public T getOrElse(KEY key, Function<KEY, T> newObjectProvider) {
-        logger.debug("[{}] - getting record with key [{}]", cacheName, key);
-        var optional = get(key);
-        if (optional.isPresent()) return optional.get();
-        logger.debug("[{}] - record with key [{}] not found inside the cache - getting the record by supplier", cacheName, key);
-        var newObj = newObjectProvider.apply(key);
-        if (newObj == null) {
-            logger.debug("[{}] - the object returned by supplier by key [{}] is null", cacheName, key);
-            return null;
-        }
+    public T getOrElse(KEY key, Function<KEY, T> newObjectProvider, boolean lock) {
+        AtomicReference<T> ref = new AtomicReference<>();
+        withLock(
+            () -> {
+                logger.debug("[{}] - getting record with key [{}]", cacheName, key);
+                var optional = get(key);
+                if (optional.isPresent()) {
+                    ref.set(optional.get());
+                    return;
+                }
 
-        return processOnlyUpdatedOrNewRecords ? put(key, newObj, false) : put(key, newObj);
+                logger.debug("[{}] - record with key [{}] not found inside the cache - getting the record by supplier", cacheName, key);
+                var newObj = newObjectProvider.apply(key);
+                if (newObj == null) {
+                    logger.debug("[{}] - the object returned by supplier by key [{}] is null", cacheName, key);
+                    ref.set(null);
+                    return;
+                }
+                ref.set(processOnlyUpdatedOrNewRecords ? put(key, newObj, false) : put(key, newObj));
+            },
+            lock
+        );
+
+        return ref.get();
     }
 
     /**
@@ -186,27 +206,30 @@ public abstract class AbstractCache<KEY, T> {
     }
 
     /**
-     * Same as {@link #put(Object, Object)} but this functions uses {@link #getOrElse(Object, Function)} to
+     * Same as {@link #put(Object, Object)} but this functions uses {@link #getOrElse(Object, Function, boolean)} to
      * retrieve the old record.
      *
      * @param key       the key of the record
      * @param obj       the new object
-     * @param supplier  the supplier used for {@link #getOrElse(Object, Function)}
+     * @param supplier  the supplier used for {@link #getOrElse(Object, Function, boolean)}
      * @param predicate the predicate
      * @return the object stored inside the cache for the specified key
      */
 
     public T putIf(KEY key, T obj, Function<KEY, T> supplier, BiFunction<T, T, Boolean> predicate) {
         AtomicReference<T> record = new AtomicReference<>();
-        withLock(() -> {
-            record.set(getOrElse(key, supplier));
-            if (record.get() == null || predicate.apply(record.get(), obj)) {
-                put(key, obj);
-                record.set(obj);
-            } else {
-                logger.debug("the obj {} is older than record value {}", obj, record.get());
-            }
-        });
+        withLock(
+            () -> {
+                record.set(getOrElse(key, supplier, false));
+                if (record.get() == null || predicate.apply(record.get(), obj)) {
+                    put(key, obj);
+                    record.set(obj);
+                } else {
+                    logger.debug("the obj {} is older than record value {}", obj, record.get());
+                }
+            },
+            true
+        );
         return record.get();
     }
 
@@ -259,14 +282,14 @@ public abstract class AbstractCache<KEY, T> {
         if (record.isExpired()) {
             try {
                 logger.debug("[{}] - record expired: [{}]", cacheName, record);
-                if (record.needToBeProcessed()) {
+                if (record.needToBeProcessed() && onExpiration != null) {
                     logger.debug("[{}] - processing record with key [{}]", cacheName, key);
                     this.onExpiration.accept(record.getValue());
                 }
                 remove(key);
             } catch (Exception e) {
                 logger.error("Exception thrown while checking expiration for record id {}: {}", key, e.getMessage());
-                if (backOffExecutor != null) {
+                if (backOffExecutor != null && onExpiration != null) {
                     backOffExecutor.execute(() -> {
                         logger.debug("Retrying executing expiration command for record {}", key);
                         this.onExpiration.accept(record.getValue());
