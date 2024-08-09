@@ -83,6 +83,8 @@
         <openapi-generator-maven-plugin.version>6.0.1</openapi-generator-maven-plugin.version>
         <properties-maven-plugin.version>1.1.0</properties-maven-plugin.version>
         <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
+        <s3-bucket-version>1.11.792</s3-bucket-version>
+        <avro.version>1.8.2</avro.version>
 
         <!-- jhipster-needle-maven-property -->
     </properties>
@@ -344,6 +346,43 @@
             <scope>test</scope>
         </dependency>
         <!-- jhipster-needle-maven-add-dependency -->
+
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>${s3-bucket-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.parquet</groupId>
+            <artifactId>parquet-avro</artifactId>
+            <version>1.11.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client-api</artifactId>
+            <version>3.2.1</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-aws</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+
+
+
+
+
     </dependencies>
 
     <build>
@@ -422,6 +461,27 @@
                 <artifactId>openapi-generator-maven-plugin</artifactId>
             </plugin>
             <!-- jhipster-needle-maven-add-plugin -->
+
+            <plugin>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro-maven-plugin</artifactId>
+                <version>${avro.version}</version>
+                <executions>
+                    <execution>
+                        <id>schemas</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>schema</goal>
+                            <goal>protocol</goal>
+                            <goal>idl-protocol</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.basedir}/src/main/resources/</sourceDirectory>
+                            <outputDirectory>${project.basedir}/src/main/java/</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
